@@ -1,0 +1,15 @@
+{
+  "name": "sprat",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Security and Privacy Requirements Analysis Tool (SPRAT) - SE3002 scoped implementation",
+  "scripts": {
+    "dev": "concurrently -n SERVER,CLIENT -c blue,green \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "install:all": "npm install --prefix server && npm install --prefix client",
+    "db:migrate": "npm run db:migrate --prefix server",
+    "db:seed": "npm run db:seed --prefix server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
