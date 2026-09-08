@@ -1,25 +1,80 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { ShieldCheck } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import QueryState from '../../components/QueryState';
 import Badge from '../../components/Badge';
+import { SelectField, TextField } from '../../components/FormField';
 import * as auditLogsApi from '../../api/auditLogs';
 
 const ACTION_VARIANT = { create: 'success', update: 'primary', delete: 'danger' };
+const PAGE_SIZE = 25;
 
+// SR-1 / NFR4: the access log is append-only at the database level; this view adds
+// filtering so a specific action, object type, or time window can be audited.
 export default function AuditLogPage() {
   const [page, setPage] = useState(1);
+  const [filters, setFilters] = useState({ action: '', objectType: '', from: '', to: '' });
+
+  const setFilter = (patch) => {
+    setFilters((f) => ({ ...f, ...patch }));
+    setPage(1);
+  };
+
   const logsQuery = useQuery({
-    queryKey: ['audit-logs', page],
-    queryFn: () => auditLogsApi.listAuditLogs(page, 25),
+    queryKey: ['audit-logs', page, filters],
+    queryFn: () =>
+      auditLogsApi.listAuditLogs({
+        page,
+        pageSize: PAGE_SIZE,
+        ...Object.fromEntries(Object.entries(filters).filter(([, v]) => v)),
+      }),
+    placeholderData: keepPreviousData,
   });
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Access Log"
-        description="Every create, update, and delete action performed in SPRAT (SR-1)."
+        description="Every create, update, and delete action in SPRAT. Append-only and tamper-evident (SR-1 / NFR4)."
       />
+
+      <div className="card grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <SelectField
+          label="Action"
+          value={filters.action}
+          onChange={(e) => setFilter({ action: e.target.value })}
+        >
+          <option value="">All actions</option>
+          <option value="create">create</option>
+          <option value="update">update</option>
+          <option value="delete">delete</option>
+        </SelectField>
+        <SelectField
+          label="Object type"
+          value={filters.objectType}
+          onChange={(e) => setFilter({ objectType: e.target.value })}
+        >
+          <option value="">All object types</option>
+          {(logsQuery.data?.objectTypes || []).map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </SelectField>
+        <TextField
+          label="From"
+          type="date"
+          value={filters.from}
+          onChange={(e) => setFilter({ from: e.target.value })}
+        />
+        <TextField
+          label="To"
+          type="date"
+          value={filters.to}
+          onChange={(e) => setFilter({ to: e.target.value })}
+        />
+      </div>
 
       <QueryState query={logsQuery}>
         {(data) => (
@@ -32,6 +87,8 @@ export default function AuditLogPage() {
                     <th className="px-4 py-3">User</th>
                     <th className="px-4 py-3">Action</th>
                     <th className="px-4 py-3">Object</th>
+                    <th className="px-4 py-3">Detail</th>
+                    <th className="px-4 py-3">IP</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -45,8 +102,18 @@ export default function AuditLogPage() {
                       <td className="px-4 py-3 text-text-secondary">
                         {log.object_type} #{log.object_id}
                       </td>
+                      <td className="px-4 py-3 text-text-secondary">{log.detail || '—'}</td>
+                      <td className="px-4 py-3 text-text-secondary">{log.ip_address || '—'}</td>
                     </tr>
                   ))}
+                  {data.rows.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center text-text-secondary">
+                        <ShieldCheck size={20} className="mx-auto mb-2" />
+                        No log entries match these filters.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

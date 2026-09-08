@@ -9,6 +9,9 @@ const domainsRouter = require('./domains');
 const documentsRouter = require('./documents');
 const goalsRouter = require('./goals');
 const scenariosRouter = require('./scenarios');
+const searchRouter = require('./search');
+const classificationTypesRouter = require('./classificationTypes');
+const keywordDefinitionsRouter = require('./keywordDefinitions');
 
 const router = Router();
 
@@ -45,9 +48,31 @@ router.patch(
   controller.updateMemberRestrictions
 );
 
+// FR-UA 2e: assign an administrator-created user group to the project.
+router.get('/:projectId/user-groups', requireProjectMember(), controller.listUserGroups);
+router.post(
+  '/:projectId/user-groups',
+  requireProjectMember(),
+  authorize('admin', 'project_manager'),
+  [body('userGroupId').isInt()],
+  validate,
+  controller.assignUserGroup
+);
+router.delete(
+  '/:projectId/user-groups/:userGroupId',
+  requireProjectMember(),
+  authorize('admin', 'project_manager'),
+  [param('userGroupId').isInt()],
+  validate,
+  controller.removeUserGroup
+);
+
 router.use('/:projectId/domains', requireProjectMember(), domainsRouter);
 router.use('/:projectId/documents', requireProjectMember(), documentsRouter);
 router.use('/:projectId/goals', requireProjectMember(), goalsRouter);
 router.use('/:projectId/scenarios', requireProjectMember(), scenariosRouter);
+router.use('/:projectId/search', requireProjectMember(), searchRouter);
+router.use('/:projectId/classifications', requireProjectMember(), classificationTypesRouter);
+router.use('/:projectId/keyword-definitions', requireProjectMember(), keywordDefinitionsRouter);
 
 module.exports = router;

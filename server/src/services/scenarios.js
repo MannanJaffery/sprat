@@ -15,10 +15,35 @@ function attachGoals(scenario) {
 }
 
 // FR-SSM 6: view any scenario's elements within the project.
-function listScenarios(projectId) {
+// FR8 (FR-SSM 7): optional additive filters so scenarios sharing an attribute
+// (status, actor, or a linked goal) can be listed together for change analysis.
+function listScenarios(projectId, filters = {}) {
+  const clauses = ['s.project_id = ?'];
+  const params = [projectId];
+
+  if (filters.status) {
+    clauses.push('s.status = ?');
+    params.push(filters.status);
+  }
+  if (filters.actor) {
+    clauses.push('s.actors LIKE ?');
+    params.push(`%${filters.actor}%`);
+  }
+  if (filters.goalId) {
+    clauses.push('s.id IN (SELECT scenario_id FROM scenario_goals WHERE goal_id = ?)');
+    params.push(filters.goalId);
+  }
+  if (filters.search) {
+    const like = `%${filters.search}%`;
+    clauses.push(
+      '(s.name LIKE ? OR s.sources LIKE ? OR s.actors LIKE ? OR s.events LIKE ? OR s.actions LIKE ?)'
+    );
+    params.push(like, like, like, like, like);
+  }
+
   return db
-    .prepare('SELECT * FROM scenarios WHERE project_id = ? ORDER BY created_at DESC')
-    .all(projectId)
+    .prepare(`SELECT s.* FROM scenarios s WHERE ${clauses.join(' AND ')} ORDER BY s.created_at DESC`)
+    .all(...params)
     .map(attachGoals);
 }
 

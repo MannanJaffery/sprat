@@ -3,7 +3,14 @@ const scenariosService = require('../services/scenarios');
 
 // FR-SSM 1/2/3/6: Manage Scenarios.
 const list = asyncHandler(async (req, res) => {
-  res.json(scenariosService.listScenarios(req.params.projectId));
+  res.json(
+    scenariosService.listScenarios(req.params.projectId, {
+      status: req.query.status,
+      actor: req.query.actor,
+      goalId: req.query.goalId,
+      search: req.query.search,
+    })
+  );
 });
 
 const getOne = asyncHandler(async (req, res) => {

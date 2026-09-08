@@ -4,15 +4,13 @@ import toast from 'react-hot-toast';
 import { Lock, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import QueryState from './QueryState';
 import Badge from './Badge';
-import { CLASSIFICATION_TYPE_LABELS } from '../constants/taxonomy';
 import * as goalsApi from '../api/goals';
 import { getErrorMessage } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 
-const TYPES = Object.keys(CLASSIFICATION_TYPE_LABELS);
-
-// FR-ADM 7: each analyst classifies a goal independently; the tool withholds other
-// analysts' choices until the current analyst submits their own, then auto-diffs results.
+// FR-ADM 7: each analyst classifies a goal independently across every dimension
+// (built-in and project-defined, FR9); the tool withholds other analysts' choices
+// until the current analyst submits their own, then auto-diffs results.
 export default function ClassificationPanel({ projectId, goalId }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -45,7 +43,9 @@ export default function ClassificationPanel({ projectId, goalId }) {
     onError: (err) => toast.error(getErrorMessage(err)),
   });
 
-  const allSelected = TYPES.every((t) => values[t]);
+  const types = optionsQuery.data?.types || [];
+  const labels = optionsQuery.data?.labels || {};
+  const allSelected = types.length > 0 && types.every((t) => values[t]);
 
   return (
     <div className="space-y-6">
@@ -54,11 +54,18 @@ export default function ClassificationPanel({ projectId, goalId }) {
           <h2 className="text-base font-semibold text-text-primary">Submit your classification</h2>
           <QueryState query={optionsQuery}>
             {(options) => (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {options.types.map((type) => (
                   <div key={type}>
-                    <label className="label">{CLASSIFICATION_TYPE_LABELS[type]}</label>
-                    <div className="flex gap-2">
+                    <label className="label">
+                      {options.labels[type]}
+                      {options.custom.includes(type) && (
+                        <span className="ml-1 text-xs font-normal text-text-secondary">
+                          (project-defined)
+                        </span>
+                      )}
+                    </label>
+                    <div className="flex flex-wrap gap-2">
                       {options.valueOptions[type].map((opt) => (
                         <button
                           key={opt}
@@ -113,7 +120,7 @@ export default function ClassificationPanel({ projectId, goalId }) {
                     <tr key={i} className="border-b border-border last:border-0">
                       <td className="py-2 text-text-primary">{e.analyst_name || 'You'}</td>
                       <td className="py-2 text-text-secondary">
-                        {CLASSIFICATION_TYPE_LABELS[e.classification_type]}
+                        {e.classification_label || labels[e.classification_type] || e.classification_type}
                       </td>
                       <td className="py-2 font-medium text-text-primary">{e.classification_value}</td>
                     </tr>
@@ -131,14 +138,18 @@ export default function ClassificationPanel({ projectId, goalId }) {
           <QueryState query={diffQuery}>
             {(diff) => (
               <div className="space-y-3">
-                {TYPES.map((type) => {
-                  const info = diff[type];
+                {Object.entries(diff).map(([type, info]) => {
                   if (!info || info.entries.length === 0) return null;
                   return (
                     <div key={type} className="rounded-lg border border-border p-3">
                       <div className="mb-2 flex items-center justify-between">
                         <span className="text-sm font-medium text-text-primary">
-                          {CLASSIFICATION_TYPE_LABELS[type]}
+                          {info.label || labels[type] || type}
+                          {info.custom && (
+                            <span className="ml-1 text-xs font-normal text-text-secondary">
+                              (project-defined)
+                            </span>
+                          )}
                         </span>
                         {info.hasConflict ? (
                           <Badge variant="danger">

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, Users, Trash2 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import QueryState from '../../components/QueryState';
 import Modal from '../../components/Modal';
@@ -110,6 +110,145 @@ function AddMemberModal({ open, onClose, projectId, existingMemberIds }) {
   );
 }
 
+// FR-UA 2e: assign an administrator-created user group to the project (bulk-adds its members).
+function UserGroupsCard({ projectId, canManage }) {
+  const queryClient = useQueryClient();
+  const [groupId, setGroupId] = useState('');
+
+  const assignedQuery = useQuery({
+    queryKey: ['project-user-groups', projectId],
+    queryFn: () => projectsApi.listProjectUserGroups(projectId),
+  });
+  const allGroupsQuery = useQuery({
+    queryKey: ['user-groups'],
+    queryFn: usersApi.listUserGroups,
+    enabled: canManage,
+  });
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['project-user-groups', projectId] });
+    queryClient.invalidateQueries({ queryKey: ['members', projectId] });
+  };
+
+  const assign = useMutation({
+    mutationFn: () => projectsApi.assignUserGroup(projectId, Number(groupId)),
+    onSuccess: (res) => {
+      toast.success(`Group assigned — ${res.membersAdded} member(s) added to the project.`);
+      setGroupId('');
+      invalidate();
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  });
+
+  const remove = useMutation({
+    mutationFn: (id) => projectsApi.removeUserGroup(projectId, id),
+    onSuccess: () => {
+      toast.success('Group unassigned.');
+      invalidate();
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  });
+
+  const assignedIds = (assignedQuery.data || []).map((g) => g.user_group_id);
+  const options = (allGroupsQuery.data || []).filter((g) => !assignedIds.includes(g.id));
+
+  return (
+    <div className="card space-y-4">
+      <div className="flex items-center gap-2">
+        <Users size={16} className="text-text-secondary" />
+        <h2 className="text-base font-semibold text-text-primary">User groups</h2>
+      </div>
+
+      {canManage && (
+        <form
+          className="flex items-end gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (groupId) assign.mutate();
+          }}
+        >
+          <div className="flex-1">
+            <SelectField
+              label="Assign a user group"
+              value={groupId}
+              onChange={(e) => setGroupId(e.target.value)}
+            >
+              <option value="">Select a group…</option>
+              {options.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </SelectField>
+          </div>
+          <button type="submit" className="btn-secondary" disabled={!groupId || assign.isPending}>
+            Assign
+          </button>
+        </form>
+      )}
+
+      <QueryState query={assignedQuery}>
+        {(groups) =>
+          groups.length === 0 ? (
+            <p className="text-sm text-text-secondary">No user groups assigned to this project.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {groups.map((g) => (
+                <li key={g.user_group_id} className="flex items-center justify-between py-2 text-sm">
+                  <span className="font-medium text-text-primary">
+                    {g.name}{' '}
+                    <span className="text-text-secondary">({g.member_count} member(s))</span>
+                  </span>
+                  {canManage && (
+                    <button
+                      className="rounded-md p-1.5 text-text-secondary hover:bg-background hover:text-danger"
+                      title="Unassign group"
+                      onClick={() => remove.mutate(g.user_group_id)}
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      </QueryState>
+    </div>
+  );
+}
+
+// FR-UA 2d: PM assigns an individual analyst/guest to a user group.
+function MemberGroupSelect({ member, groups }) {
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: (value) =>
+      usersApi.setUserGroup(member.user_id, value === '' ? null : Number(value)),
+    onSuccess: () => {
+      toast.success('User group updated.');
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['members', member.project_id] });
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  });
+
+  return (
+    <select
+      className="input py-1 text-xs"
+      defaultValue={member.user_group_id || ''}
+      disabled={mutation.isPending}
+      onChange={(e) => mutation.mutate(e.target.value)}
+    >
+      <option value="">No group</option>
+      {groups.map((g) => (
+        <option key={g.id} value={g.id}>
+          {g.name}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 export default function ProjectOverviewPage() {
   const { projectId } = useParams();
   const { user } = useAuth();
@@ -125,6 +264,22 @@ export default function ProjectOverviewPage() {
   });
 
   const canManageMembers = user?.role === 'admin' || user?.role === 'project_manager';
+
+  const usersQuery = useQuery({
+    queryKey: ['users'],
+    queryFn: usersApi.listUsers,
+    enabled: canManageMembers,
+  });
+  const groupsQuery = useQuery({
+    queryKey: ['user-groups'],
+    queryFn: usersApi.listUserGroups,
+    enabled: canManageMembers,
+  });
+
+  const usersById = useMemo(
+    () => Object.fromEntries((usersQuery.data || []).map((u) => [u.id, u])),
+    [usersQuery.data]
+  );
   const existingMemberIds = useMemo(
     () => (membersQuery.data || []).map((m) => m.user_id),
     [membersQuery.data]
@@ -153,37 +308,63 @@ export default function ProjectOverviewPage() {
 
         <QueryState query={membersQuery}>
           {(members) => (
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-border text-xs uppercase text-text-secondary">
-                <tr>
-                  <th className="py-2">Name</th>
-                  <th className="py-2">Email</th>
-                  <th className="py-2">Role</th>
-                  <th className="py-2">Access</th>
-                </tr>
-              </thead>
-              <tbody>
-                {members.map((m) => (
-                  <tr key={m.id} className="border-b border-border last:border-0">
-                    <td className="py-2 font-medium text-text-primary">{m.name}</td>
-                    <td className="py-2 text-text-secondary">{m.email}</td>
-                    <td className="py-2">
-                      <Badge variant={roleVariant(m.role)}>{m.role.replace('_', ' ')}</Badge>
-                    </td>
-                    <td className="py-2 text-text-secondary">
-                      {m.role !== 'guest'
-                        ? 'Full project access'
-                        : m.guest_restrictions
-                        ? 'Restricted to assigned domains'
-                        : 'Unrestricted'}
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-border text-xs uppercase text-text-secondary">
+                  <tr>
+                    <th className="py-2">Name</th>
+                    <th className="py-2">Email</th>
+                    <th className="py-2">Role</th>
+                    <th className="py-2">Access</th>
+                    {canManageMembers && <th className="py-2">User group</th>}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {members.map((m) => {
+                    const directoryUser = usersById[m.user_id];
+                    const canAssignGroup =
+                      canManageMembers && ['analyst', 'guest'].includes(m.role);
+                    return (
+                      <tr key={m.id} className="border-b border-border last:border-0">
+                        <td className="py-2 font-medium text-text-primary">{m.name}</td>
+                        <td className="py-2 text-text-secondary">{m.email}</td>
+                        <td className="py-2">
+                          <Badge variant={roleVariant(m.role)}>{m.role.replace('_', ' ')}</Badge>
+                        </td>
+                        <td className="py-2 text-text-secondary">
+                          {m.role !== 'guest'
+                            ? 'Full project access'
+                            : m.guest_restrictions
+                            ? 'Restricted to assigned domains'
+                            : 'Unrestricted'}
+                        </td>
+                        {canManageMembers && (
+                          <td className="py-2">
+                            {canAssignGroup ? (
+                              <MemberGroupSelect
+                                member={{
+                                  ...m,
+                                  project_id: projectId,
+                                  user_group_id: directoryUser?.user_group_id || '',
+                                }}
+                                groups={groupsQuery.data || []}
+                              />
+                            ) : (
+                              <span className="text-text-secondary">—</span>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </QueryState>
       </div>
+
+      <UserGroupsCard projectId={projectId} canManage={canManageMembers} />
 
       <AddMemberModal
         open={addMemberOpen}

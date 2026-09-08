@@ -2,7 +2,7 @@ import { NavLink, useParams } from 'react-router-dom';
 import clsx from 'clsx';
 import {
   FolderKanban, Users, ShieldCheck, ScrollText, LayoutDashboard,
-  Tags, FileText, Target, GitBranch, ArrowLeft,
+  Tags, FileText, Target, GitBranch, ArrowLeft, Search, SlidersHorizontal, BookMarked,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
@@ -46,6 +46,13 @@ export default function Sidebar() {
           <NavItem to={`/projects/${projectId}/documents`} icon={FileText} label="Documents" />
           <NavItem to={`/projects/${projectId}/goals`} icon={Target} label="Goals" />
           <NavItem to={`/projects/${projectId}/scenarios`} icon={GitBranch} label="Scenarios" />
+          <NavItem to={`/projects/${projectId}/search`} icon={Search} label="Search" />
+          <NavItem to={`/projects/${projectId}/keywords`} icon={BookMarked} label="Keyword Definitions" />
+          <NavItem
+            to={`/projects/${projectId}/classifications`}
+            icon={SlidersHorizontal}
+            label="Classification Dimensions"
+          />
         </>
       ) : (
         <>

@@ -43,4 +43,45 @@ const updateMemberRestrictions = asyncHandler(async (req, res) => {
   res.status(204).send();
 });
 
-module.exports = { list, getOne, create, listMembers, addMember, updateMemberRestrictions };
+// FR-UA 2e: PM assigns an administrator-created user group to the project.
+const listUserGroups = asyncHandler(async (req, res) => {
+  res.json(projectsService.listProjectUserGroups(req.params.projectId));
+});
+
+const assignUserGroup = asyncHandler(async (req, res) => {
+  const result = projectsService.assignUserGroup(
+    req.params.projectId,
+    Number(req.body.userGroupId),
+    req.user.id
+  );
+  res.locals.audit({
+    action: 'update',
+    objectType: 'project_user_group',
+    objectId: Number(req.params.projectId),
+    detail: `group ${result.userGroupId} (+${result.membersAdded} members)`,
+  });
+  res.status(201).json(result);
+});
+
+const removeUserGroup = asyncHandler(async (req, res) => {
+  projectsService.removeUserGroup(req.params.projectId, Number(req.params.userGroupId));
+  res.locals.audit({
+    action: 'update',
+    objectType: 'project_user_group',
+    objectId: Number(req.params.projectId),
+    detail: `removed group ${req.params.userGroupId}`,
+  });
+  res.status(204).send();
+});
+
+module.exports = {
+  list,
+  getOne,
+  create,
+  listMembers,
+  addMember,
+  updateMemberRestrictions,
+  listUserGroups,
+  assignUserGroup,
+  removeUserGroup,
+};

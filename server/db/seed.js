@@ -54,6 +54,18 @@ const guestId = upsertUser({
   role: 'guest',
 });
 
+// FR-UA 1a / 2d: an administrator-created user group, with two analysts assigned to it.
+let group = db.prepare('SELECT id FROM user_groups WHERE name = ?').get('NCSU TPP.org');
+let groupId;
+if (!group) {
+  groupId = db
+    .prepare('INSERT INTO user_groups (name, created_by) VALUES (?, ?)')
+    .run('NCSU TPP.org', adminId).lastInsertRowid;
+} else {
+  groupId = group.id;
+}
+db.prepare('UPDATE users SET user_group_id = ? WHERE id IN (?, ?)').run(groupId, analystAId, analystBId);
+
 let project = db.prepare('SELECT id FROM projects WHERE name = ?').get('Healthcare Privacy Review');
 let projectId;
 if (!project) {
@@ -115,6 +127,114 @@ if (!document) {
   documentId = info.lastInsertRowid;
 } else {
   documentId = document.id;
+}
+
+// FR-GSM 1: a few sample goals mined from the seeded policy document, so the
+// goal/search/classification/traceability features have data to work with.
+const goalSeed = [
+  {
+    code: 'G-1',
+    description: 'Notify the user about what personal health information is collected.',
+    taxonomy_category: 'protection',
+    taxonomy_subtype: 'Notice/Awareness',
+    granularity: 'policy',
+    observable: 1,
+    actor: 'Organisation',
+    context: 'We collect information you provide directly to us, such as your name, contact details, and health history.',
+    legislation: 'HIPAA',
+    subjects: ['Personal Health Information (PHI)', 'General Information'],
+  },
+  {
+    code: 'G-2',
+    description: 'Allow the user to access, correct, or request deletion of their information.',
+    taxonomy_category: 'protection',
+    taxonomy_subtype: 'Access/Participation',
+    granularity: 'scenario',
+    observable: 1,
+    actor: 'User',
+    context: 'You may access, correct, or request deletion of your information at any time by contacting our support team.',
+    legislation: 'HIPAA',
+    subjects: ['Personally Identifiable Information (PII)', 'Security Access'],
+  },
+  {
+    code: 'G-3',
+    description: 'Retain personal information only as long as necessary for stated purposes.',
+    taxonomy_category: 'vulnerability',
+    taxonomy_subtype: 'Information Storage',
+    granularity: 'policy',
+    observable: 0,
+    actor: 'Organisation',
+    context: 'We retain your information only as long as necessary to fulfill the purposes described in this policy.',
+    legislation: null,
+    subjects: ['Policies/Procedures'],
+  },
+];
+for (const g of goalSeed) {
+  const exists = db
+    .prepare('SELECT id FROM goals WHERE project_id = ? AND goal_code = ?')
+    .get(projectId, g.code);
+  if (exists) continue;
+  const goalId = db
+    .prepare(
+      `INSERT INTO goals (project_id, document_id, goal_code, description, taxonomy_category,
+         taxonomy_subtype, granularity, observable, actor, context_excerpt, relevant_legislation, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      projectId,
+      documentId,
+      g.code,
+      g.description,
+      g.taxonomy_category,
+      g.taxonomy_subtype,
+      g.granularity,
+      g.observable,
+      g.actor,
+      g.context,
+      g.legislation,
+      analystAId
+    ).lastInsertRowid;
+  for (const subject of g.subjects) {
+    db.prepare(
+      'INSERT OR IGNORE INTO goal_subject_classifications (goal_id, subject_classification) VALUES (?, ?)'
+    ).run(goalId, subject);
+  }
+  db.prepare(
+    `INSERT INTO goal_document_links (goal_id, document_id, occurrence_count)
+     VALUES (?, ?, 1) ON CONFLICT (goal_id, document_id) DO NOTHING`
+  ).run(goalId, documentId);
+}
+
+// FR-GSM 14: a couple of goal keyword definitions for the sample project.
+const keywordSeed = [
+  ['ALLOW', 'The policy explicitly permits the described data practice.'],
+  ['COLLECT', 'The organisation gathers the described information from or about the user.'],
+];
+for (const [keyword, definition] of keywordSeed) {
+  const exists = db
+    .prepare('SELECT id FROM keyword_definitions WHERE project_id = ? AND keyword = ?')
+    .get(projectId, keyword);
+  if (!exists) {
+    db.prepare(
+      'INSERT INTO keyword_definitions (project_id, keyword, definition, created_by) VALUES (?, ?, ?, ?)'
+    ).run(projectId, keyword, definition, analystAId);
+  }
+}
+
+// FR-GSM 5: one project-defined classification dimension for the sample project.
+const customType = db
+  .prepare('SELECT id FROM classification_types WHERE project_id = ? AND type_key = ?')
+  .get(projectId, 'data_sensitivity');
+if (!customType) {
+  db.prepare(
+    'INSERT INTO classification_types (project_id, type_key, label, options, created_by) VALUES (?, ?, ?, ?, ?)'
+  ).run(
+    projectId,
+    'data_sensitivity',
+    'Data Sensitivity',
+    JSON.stringify(['low', 'moderate', 'high']),
+    pmId
+  );
 }
 
 console.log('Seed complete.');

@@ -17,6 +17,16 @@ export const updateMemberRestrictions = (projectId, userId, guestRestrictions) =
     .patch(`/projects/${projectId}/members/${userId}`, { guestRestrictions })
     .then((r) => r.data);
 
+// FR-UA 2e: assign / list / remove administrator-created user groups for a project.
+export const listProjectUserGroups = (projectId) =>
+  client.get(`/projects/${projectId}/user-groups`).then((r) => r.data);
+
+export const assignUserGroup = (projectId, userGroupId) =>
+  client.post(`/projects/${projectId}/user-groups`, { userGroupId }).then((r) => r.data);
+
+export const removeUserGroup = (projectId, userGroupId) =>
+  client.delete(`/projects/${projectId}/user-groups/${userGroupId}`).then((r) => r.data);
+
 export const listDomains = (projectId) =>
   client.get(`/projects/${projectId}/domains`).then((r) => r.data);
 

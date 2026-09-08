@@ -4,7 +4,6 @@ const validate = require('../middleware/validate');
 const { authorize } = require('../middleware/auth');
 const controller = require('../controllers/goalsController');
 const classificationsController = require('../controllers/goalClassificationsController');
-const { CLASSIFICATION_TYPES, VALUE_OPTIONS } = require('../services/goalClassifications');
 
 const router = Router({ mergeParams: true });
 
@@ -72,15 +71,12 @@ router.get(
   classificationsController.list
 );
 
+// Values are validated against each dimension's allowed options in the service,
+// since project-defined dimensions (FR9) are not known at route-declaration time.
 router.post(
   '/:goalId/classifications',
   authorize('analyst'),
-  [
-    param('goalId').isInt(),
-    ...CLASSIFICATION_TYPES.map((type) =>
-      body(type).optional().isIn(VALUE_OPTIONS[type]).withMessage(`Invalid value for ${type}.`)
-    ),
-  ],
+  [param('goalId').isInt()],
   validate,
   classificationsController.submit
 );

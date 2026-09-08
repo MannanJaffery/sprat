@@ -22,32 +22,57 @@ function attachDetails(goal) {
   return { ...goal, observable: Boolean(goal.observable), subjectClassifications, documentLinks };
 }
 
-// FR-GSM 1/3/4/7/8 substrate: list with optional filters (also supports FR-GSM16-style search).
+// FR-GSM 1/3/4/7/8 substrate + FR8 (FR-GSM 16/17): attribute-based search. Every
+// filter is optional and additive, so analysts and guests can narrow goals by any
+// combination of taxonomy, subject, actor, source document, legislation, etc.
 function listGoals(projectId, filters = {}) {
-  const clauses = ['project_id = ?'];
+  const clauses = ['g.project_id = ?'];
   const params = [projectId];
 
   if (filters.documentId) {
-    clauses.push('document_id = ?');
+    clauses.push('g.document_id = ?');
     params.push(filters.documentId);
   }
   if (filters.taxonomyCategory) {
-    clauses.push('taxonomy_category = ?');
+    clauses.push('g.taxonomy_category = ?');
     params.push(filters.taxonomyCategory);
   }
+  if (filters.taxonomySubtype) {
+    clauses.push('g.taxonomy_subtype = ?');
+    params.push(filters.taxonomySubtype);
+  }
   if (filters.granularity) {
-    clauses.push('granularity = ?');
+    clauses.push('g.granularity = ?');
     params.push(filters.granularity);
   }
+  if (filters.observable === 'true' || filters.observable === true) {
+    clauses.push('g.observable = 1');
+  } else if (filters.observable === 'false' || filters.observable === false) {
+    clauses.push('g.observable = 0');
+  }
+  if (filters.actor) {
+    clauses.push('g.actor LIKE ?');
+    params.push(`%${filters.actor}%`);
+  }
+  if (filters.legislation) {
+    clauses.push('g.relevant_legislation LIKE ?');
+    params.push(`%${filters.legislation}%`);
+  }
+  if (filters.subjectClassification) {
+    clauses.push(
+      'g.id IN (SELECT goal_id FROM goal_subject_classifications WHERE subject_classification = ?)'
+    );
+    params.push(filters.subjectClassification);
+  }
   if (filters.search) {
-    clauses.push('(description LIKE ? OR actor LIKE ? OR goal_code LIKE ?)');
+    clauses.push('(g.description LIKE ? OR g.actor LIKE ? OR g.goal_code LIKE ? OR g.context_excerpt LIKE ?)');
     const like = `%${filters.search}%`;
-    params.push(like, like, like);
+    params.push(like, like, like, like);
   }
 
   const rows = db
     .prepare(
-      `SELECT * FROM goals WHERE ${clauses.join(' AND ')} ORDER BY created_at DESC`
+      `SELECT g.* FROM goals g WHERE ${clauses.join(' AND ')} ORDER BY g.created_at DESC`
     )
     .all(...params);
 

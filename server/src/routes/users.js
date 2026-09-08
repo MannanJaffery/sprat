@@ -43,6 +43,15 @@ router.patch(
 router.patch('/:id/disable', authorize('admin'), param('id').isInt(), validate, usersController.disable);
 router.patch('/:id/enable', authorize('admin'), param('id').isInt(), validate, usersController.enable);
 
+// FR-UA 2d: project managers assign analysts/guests to administrator-created user groups.
+router.patch(
+  '/:id/group',
+  authorize('admin', 'project_manager'),
+  [param('id').isInt(), body('userGroupId').optional({ nullable: true }).isInt()],
+  validate,
+  usersController.setGroup
+);
+
 router.post(
   '/:id/reset-password',
   authorize('admin'),

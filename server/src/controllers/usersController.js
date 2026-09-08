@@ -34,6 +34,14 @@ const enable = asyncHandler(async (req, res) => {
   res.json(user);
 });
 
+// FR-UA 2d: a project manager (or admin) assigns an analyst/guest to a user group.
+const setGroup = asyncHandler(async (req, res) => {
+  const groupId = req.body.userGroupId === null ? null : Number(req.body.userGroupId);
+  const user = usersService.setUserGroup(req.params.id, groupId);
+  res.locals.audit({ action: 'update', objectType: 'user', objectId: user.id, detail: 'user_group' });
+  res.json(user);
+});
+
 // FR-UA 1c: admin resets a user's password.
 const resetPassword = asyncHandler(async (req, res) => {
   usersService.resetPassword(req.params.id, req.body.password);
@@ -41,4 +49,4 @@ const resetPassword = asyncHandler(async (req, res) => {
   res.status(204).send();
 });
 
-module.exports = { list, getOne, create, update, disable, enable, resetPassword };
+module.exports = { list, getOne, create, update, disable, enable, setGroup, resetPassword };

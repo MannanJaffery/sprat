@@ -79,6 +79,54 @@ function updateMemberRestrictions(projectId, userId, guestRestrictions) {
   );
 }
 
+// FR-UA 2e: PM assigns a whole user group to a project. Each current member of the
+// group is also materialised as a project_member so the existing per-user access
+// checks (NFR1) keep working without change.
+const assignUserGroup = db.transaction((projectId, userGroupId, addedBy) => {
+  getProjectById(projectId);
+  const group = db.prepare('SELECT id FROM user_groups WHERE id = ?').get(userGroupId);
+  if (!group) throw new NotFoundError('User group not found');
+
+  db.prepare(
+    `INSERT INTO project_user_groups (project_id, user_group_id, added_by)
+     VALUES (?, ?, ?)
+     ON CONFLICT (project_id, user_group_id) DO NOTHING`
+  ).run(projectId, userGroupId, addedBy);
+
+  const members = db.prepare('SELECT id FROM users WHERE user_group_id = ?').all(userGroupId);
+  const insertMember = db.prepare(
+    `INSERT INTO project_members (project_id, user_id, guest_restrictions)
+     VALUES (?, ?, NULL)
+     ON CONFLICT (project_id, user_id) DO NOTHING`
+  );
+  for (const member of members) insertMember.run(projectId, member.id);
+
+  return { userGroupId, membersAdded: members.length };
+});
+
+function listProjectUserGroups(projectId) {
+  return db
+    .prepare(
+      `SELECT pug.user_group_id, g.name,
+              (SELECT COUNT(*) FROM users u WHERE u.user_group_id = pug.user_group_id) AS member_count,
+              pug.added_at
+       FROM project_user_groups pug JOIN user_groups g ON g.id = pug.user_group_id
+       WHERE pug.project_id = ?
+       ORDER BY g.name`
+    )
+    .all(projectId);
+}
+
+function removeUserGroup(projectId, userGroupId) {
+  const link = db
+    .prepare('SELECT id FROM project_user_groups WHERE project_id = ? AND user_group_id = ?')
+    .get(projectId, userGroupId);
+  if (!link) throw new NotFoundError('That user group is not assigned to this project.');
+  db.prepare('DELETE FROM project_user_groups WHERE id = ?').run(link.id);
+  // Individual project_members added via the group are intentionally left in place,
+  // so removing a group never silently revokes someone's in-progress work access.
+}
+
 module.exports = {
   listProjectsForUser,
   getProjectById,
@@ -86,4 +134,7 @@ module.exports = {
   listMembers,
   addMember,
   updateMemberRestrictions,
+  assignUserGroup,
+  listProjectUserGroups,
+  removeUserGroup,
 };

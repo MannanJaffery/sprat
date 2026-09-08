@@ -12,6 +12,9 @@ import GoalsListPage from './pages/projects/GoalsListPage';
 import GoalDetailPage from './pages/projects/GoalDetailPage';
 import ScenariosListPage from './pages/projects/ScenariosListPage';
 import ScenarioDetailPage from './pages/projects/ScenarioDetailPage';
+import SearchPage from './pages/projects/SearchPage';
+import ClassificationTypesPage from './pages/projects/ClassificationTypesPage';
+import KeywordDefinitionsPage from './pages/projects/KeywordDefinitionsPage';
 
 import UsersPage from './pages/admin/UsersPage';
 import UserGroupsPage from './pages/admin/UserGroupsPage';
@@ -39,6 +42,9 @@ export default function App() {
         <Route path="projects/:projectId/goals/:goalId" element={<GoalDetailPage />} />
         <Route path="projects/:projectId/scenarios" element={<ScenariosListPage />} />
         <Route path="projects/:projectId/scenarios/:scenarioId" element={<ScenarioDetailPage />} />
+        <Route path="projects/:projectId/search" element={<SearchPage />} />
+        <Route path="projects/:projectId/classifications" element={<ClassificationTypesPage />} />
+        <Route path="projects/:projectId/keywords" element={<KeywordDefinitionsPage />} />
 
         <Route
           path="admin/users"

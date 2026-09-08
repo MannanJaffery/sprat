@@ -1,4 +1,5 @@
 import client from './client';
 
-export const listAuditLogs = (page = 1, pageSize = 50) =>
-  client.get('/audit-logs', { params: { page, pageSize } }).then((r) => r.data);
+// SR-1 / NFR4: filtered, paginated access log.
+export const listAuditLogs = (params = {}) =>
+  client.get('/audit-logs', { params }).then((r) => r.data);

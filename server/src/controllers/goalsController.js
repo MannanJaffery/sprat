@@ -15,7 +15,12 @@ const list = asyncHandler(async (req, res) => {
   const goals = goalsService.listGoals(req.params.projectId, {
     documentId: req.query.documentId,
     taxonomyCategory: req.query.taxonomyCategory,
+    taxonomySubtype: req.query.taxonomySubtype,
     granularity: req.query.granularity,
+    observable: req.query.observable,
+    actor: req.query.actor,
+    legislation: req.query.legislation,
+    subjectClassification: req.query.subjectClassification,
     search: req.query.search,
   });
 

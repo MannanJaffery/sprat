@@ -62,6 +62,24 @@ function setUserStatus(id, status) {
   return getUserById(id);
 }
 
+// FR-UA 2d: a project manager assigns an analyst (or guest) to a user group
+// created by the administrator. Pass null to clear the assignment.
+function setUserGroup(id, userGroupId) {
+  const user = getUserById(id);
+  if (!['analyst', 'guest'].includes(user.role)) {
+    throw new ConflictError('Only analysts and guests can be assigned to a user group.');
+  }
+  if (userGroupId != null) {
+    const group = db.prepare('SELECT id FROM user_groups WHERE id = ?').get(userGroupId);
+    if (!group) throw new NotFoundError('User group not found');
+  }
+  db.prepare(`UPDATE users SET user_group_id = ?, updated_at = datetime('now') WHERE id = ?`).run(
+    userGroupId ?? null,
+    id
+  );
+  return getUserById(id);
+}
+
 // FR-UA 1c: admin can reset any user's password.
 function resetPassword(id, newPassword) {
   getUserById(id);
@@ -79,5 +97,6 @@ module.exports = {
   createUser,
   updateUser,
   setUserStatus,
+  setUserGroup,
   resetPassword,
 };
