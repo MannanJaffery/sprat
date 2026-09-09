@@ -1,11 +1,12 @@
 import clsx from 'clsx';
 
 const VARIANTS = {
-  neutral: 'bg-gray-100 text-gray-700',
+  neutral: 'bg-surface-soft text-text-secondary',
   primary: 'bg-primary-100 text-primary-700',
-  success: 'bg-green-100 text-green-700',
-  warning: 'bg-amber-100 text-amber-700',
-  danger: 'bg-red-100 text-red-700',
+  accent: 'bg-primary-100 text-primary-700',
+  success: 'bg-success/10 text-success',
+  warning: 'bg-warning/10 text-warning',
+  danger: 'bg-danger/10 text-danger',
 };
 
 export default function Badge({ variant = 'neutral', children, className }) {

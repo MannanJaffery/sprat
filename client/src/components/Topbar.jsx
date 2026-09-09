@@ -1,7 +1,11 @@
-import { LogOut } from 'lucide-react';
+import { Menu, Transition } from '@headlessui/react';
+import { Fragment } from 'react';
+import { LogOut, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import Avatar from './Avatar';
 import Badge, { roleVariant } from './Badge';
+import Breadcrumbs from './Breadcrumbs';
 import { useAuth } from '../hooks/useAuth';
 
 const ROLE_LABELS = {
@@ -25,20 +29,72 @@ export default function Topbar() {
     }
   };
 
+  const openPalette = () => {
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true })
+    );
+  };
+
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-surface px-6">
-      <div />
-      <div className="flex items-center gap-4">
-        {user && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-text-primary">{user.name}</span>
-            <Badge variant={roleVariant(user.role)}>{ROLE_LABELS[user.role] || user.role}</Badge>
-          </div>
-        )}
-        <button type="button" onClick={handleLogout} className="btn-secondary">
-          <LogOut size={16} />
-          Sign out
+    <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-border bg-surface px-6">
+      <Breadcrumbs />
+
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={openPalette}
+          className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-text-secondary transition-colors hover:border-primary-300 hover:text-text-primary"
+        >
+          <Search size={14} />
+          Search
+          <kbd className="ml-2 rounded border border-border bg-surface px-1.5 py-0.5 text-[10px] text-text-muted">
+            ⌘K
+          </kbd>
         </button>
+
+        {user && (
+          <Menu as="div" className="relative">
+            <Menu.Button className="flex items-center gap-2 rounded-lg px-1.5 py-1 transition-colors hover:bg-background">
+              <Avatar name={user.name} size="sm" />
+            </Menu.Button>
+            <Transition
+              as={Fragment}
+              enter="transition ease-out duration-150"
+              enterFrom="opacity-0 scale-95 -translate-y-1"
+              enterTo="opacity-100 scale-100 translate-y-0"
+              leave="transition ease-in duration-100"
+              leaveFrom="opacity-100 scale-100"
+              leaveTo="opacity-0 scale-95"
+            >
+              <Menu.Items className="absolute right-0 z-20 mt-2 w-64 origin-top-right rounded-xl border border-border bg-surface p-1.5 shadow-soft focus:outline-none">
+                <div className="flex items-center gap-3 rounded-lg px-3 py-2.5">
+                  <Avatar name={user.name} size="md" />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-text-primary">{user.name}</p>
+                    <p className="truncate text-xs text-text-secondary">{user.email}</p>
+                  </div>
+                </div>
+                <div className="px-3 pb-2">
+                  <Badge variant={roleVariant(user.role)}>{ROLE_LABELS[user.role] || user.role}</Badge>
+                </div>
+                <div className="my-1 border-t border-border" />
+                <Menu.Item>
+                  {({ active }) => (
+                    <button
+                      onClick={handleLogout}
+                      className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-text-primary ${
+                        active ? 'bg-background' : ''
+                      }`}
+                    >
+                      <LogOut size={15} />
+                      Sign out
+                    </button>
+                  )}
+                </Menu.Item>
+              </Menu.Items>
+            </Transition>
+          </Menu>
+        )}
       </div>
     </header>
   );

@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { Plus, FileText, ArrowRight } from 'lucide-react';
+import { Plus, FileText, ChevronRight } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import QueryState from '../../components/QueryState';
 import EmptyState from '../../components/EmptyState';
@@ -12,6 +13,7 @@ import { useAuth } from '../../hooks/useAuth';
 import * as documentsApi from '../../api/documents';
 import * as projectsApi from '../../api/projects';
 import { getErrorMessage } from '../../api/client';
+import { staggerContainer, staggerItem } from '../../lib/motion';
 
 export default function DocumentsPage() {
   const { projectId } = useParams();
@@ -51,6 +53,8 @@ export default function DocumentsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        icon={FileText}
+        eyebrow={`${documentsQuery.data?.length ?? '…'} documents`}
         title="Documents"
         description="Privacy policies and other analysis documents in this project's repository."
         actions={
@@ -71,23 +75,30 @@ export default function DocumentsPage() {
               description="Add a policy document to begin mining goals from it."
             />
           ) : (
-            <div className="card divide-y divide-border p-0">
+            <motion.div initial="hidden" animate="show" variants={staggerContainer} className="space-y-2.5">
               {docs.map((d) => (
-                <button
+                <motion.button
                   key={d.id}
+                  variants={staggerItem}
+                  whileHover={{ x: 2 }}
                   onClick={() => navigate(`/projects/${projectId}/documents/${d.id}`)}
-                  className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-background"
+                  className="card card-hover flex w-full items-center justify-between text-left"
                 >
-                  <div>
-                    <p className="text-sm font-medium text-text-primary">{d.name}</p>
-                    <p className="text-xs text-text-secondary">
-                      {d.content ? `${d.content.split(/\s+/).length} words` : 'No content yet'}
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600">
+                      <FileText size={16} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-text-primary">{d.name}</p>
+                      <p className="text-xs text-text-secondary">
+                        {d.content ? `${d.content.split(/\s+/).length} words` : 'No content yet'}
+                      </p>
+                    </div>
                   </div>
-                  <ArrowRight size={16} className="text-text-secondary" />
-                </button>
+                  <ChevronRight size={16} className="text-text-muted" />
+                </motion.button>
               ))}
-            </div>
+            </motion.div>
           )
         }
       </QueryState>

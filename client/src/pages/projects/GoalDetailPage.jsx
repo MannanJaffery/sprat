@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { ArrowLeft, Pencil, Trash2, Repeat } from 'lucide-react';
+import { ArrowLeft, Pencil, Trash2, Repeat, Target } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import QueryState from '../../components/QueryState';
 import ConfirmDialog from '../../components/ConfirmDialog';
@@ -128,7 +129,9 @@ export default function GoalDetailPage() {
         {(goal) => (
           <>
             <PageHeader
-              title={`${goal.goal_code} — ${goal.description}`}
+              icon={Target}
+              eyebrow={goal.goal_code}
+              title={goal.description}
               description={`Context: ${goal.context_excerpt || 'not recorded'}`}
               actions={
                 canManage &&
@@ -148,18 +151,23 @@ export default function GoalDetailPage() {
               }
             />
 
-            <div className="flex gap-2 border-b border-border">
+            <div className="flex gap-1 border-b border-border">
               {TABS.map((t) => (
                 <button
                   key={t}
                   onClick={() => setTab(t)}
-                  className={`border-b-2 px-3 py-2 text-sm font-medium ${
-                    tab === t
-                      ? 'border-primary-600 text-primary-700'
-                      : 'border-transparent text-text-secondary hover:text-text-primary'
+                  className={`relative px-3 py-2.5 text-sm font-medium transition-colors ${
+                    tab === t ? 'text-primary-700' : 'text-text-secondary hover:text-text-primary'
                   }`}
                 >
                   {t}
+                  {tab === t && (
+                    <motion.span
+                      layoutId="goal-tab-underline"
+                      className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-primary-600"
+                      transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                    />
+                  )}
                 </button>
               ))}
             </div>

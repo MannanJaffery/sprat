@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, FileText } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import QueryState from '../../components/QueryState';
 import FleschScoreCard from '../../components/FleschScoreCard';
@@ -37,7 +37,9 @@ export default function DocumentDetailPage() {
       </button>
 
       <QueryState query={documentQuery}>
-        {(doc) => <PageHeader title={doc.name} description={doc.source_url || 'Analysis document'} />}
+        {(doc) => (
+          <PageHeader icon={FileText} title={doc.name} description={doc.source_url || 'Analysis document'} />
+        )}
       </QueryState>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

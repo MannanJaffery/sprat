@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { Plus, Target, Search } from 'lucide-react';
+import { Plus, Target, Search, ChevronRight } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import QueryState from '../../components/QueryState';
 import EmptyState from '../../components/EmptyState';
@@ -13,6 +14,7 @@ import { useAuth } from '../../hooks/useAuth';
 import * as goalsApi from '../../api/goals';
 import * as documentsApi from '../../api/documents';
 import { getErrorMessage } from '../../api/client';
+import { staggerContainer, staggerItem } from '../../lib/motion';
 
 export default function GoalsListPage() {
   const { projectId } = useParams();
@@ -47,6 +49,8 @@ export default function GoalsListPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        icon={Target}
+        eyebrow={`${goalsQuery.data?.length ?? '…'} goals`}
         title="Goals"
         description="Objectives mined from policy documents, classified by taxonomy and subject."
         actions={
@@ -59,7 +63,7 @@ export default function GoalsListPage() {
       />
 
       <div className="relative max-w-sm">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
         <input
           className="input pl-9"
           placeholder="Search by description, actor, or Goal ID…"
@@ -77,21 +81,25 @@ export default function GoalsListPage() {
               description="Add a goal derived from one of this project's policy documents."
             />
           ) : (
-            <div className="card divide-y divide-border p-0">
+            <motion.div initial="hidden" animate="show" variants={staggerContainer} className="space-y-2.5">
               {goals.map((g) => (
-                <button
+                <motion.button
                   key={g.id}
+                  variants={staggerItem}
+                  whileHover={{ x: 2 }}
                   onClick={() => navigate(`/projects/${projectId}/goals/${g.id}`)}
-                  className="flex w-full flex-col gap-2 px-4 py-3 text-left hover:bg-background sm:flex-row sm:items-center sm:justify-between"
+                  className="card card-hover flex w-full flex-col gap-3 text-left sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm font-medium text-text-primary">
-                      <span className="font-mono text-xs text-text-secondary">{g.goal_code}</span>{' '}
+                      <span className="rounded bg-surface-soft px-1.5 py-0.5 font-mono text-xs text-text-secondary">
+                        {g.goal_code}
+                      </span>{' '}
                       {g.description}
                     </p>
-                    <p className="text-xs text-text-secondary">Actor: {g.actor || '—'}</p>
+                    <p className="mt-1 text-xs text-text-secondary">Actor: {g.actor || '—'}</p>
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex shrink-0 flex-wrap items-center gap-1.5">
                     <Badge variant={g.taxonomy_category === 'protection' ? 'primary' : 'warning'}>
                       {g.taxonomy_category}
                     </Badge>
@@ -99,10 +107,11 @@ export default function GoalsListPage() {
                     <Badge variant={g.observable ? 'success' : 'neutral'}>
                       {g.observable ? 'observable' : 'unobservable'}
                     </Badge>
+                    <ChevronRight size={16} className="ml-1 text-text-muted" />
                   </div>
-                </button>
+                </motion.button>
               ))}
-            </div>
+            </motion.div>
           )
         }
       </QueryState>

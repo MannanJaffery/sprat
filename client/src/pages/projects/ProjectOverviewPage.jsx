@@ -2,10 +2,11 @@ import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { UserPlus, Users, Trash2 } from 'lucide-react';
+import { UserPlus, Users, Trash2, LayoutDashboard } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import QueryState from '../../components/QueryState';
 import Modal from '../../components/Modal';
+import Avatar from '../../components/Avatar';
 import Badge, { roleVariant } from '../../components/Badge';
 import { SelectField, CheckboxField } from '../../components/FormField';
 import { useAuth } from '../../hooks/useAuth';
@@ -290,6 +291,8 @@ export default function ProjectOverviewPage() {
       <QueryState query={projectQuery}>
         {(project) => (
           <PageHeader
+            icon={LayoutDashboard}
+            eyebrow="Project overview"
             title={project.name}
             description={project.description || 'No description provided.'}
           />
@@ -298,7 +301,9 @@ export default function ProjectOverviewPage() {
 
       <div className="card space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-text-primary">Members</h2>
+          <h2 className="flex items-center gap-2 text-base font-semibold text-text-primary">
+            <Users size={16} className="text-text-secondary" /> Members
+          </h2>
           {canManageMembers && (
             <button className="btn-secondary" onClick={() => setAddMemberOpen(true)}>
               <UserPlus size={16} /> Add member
@@ -326,7 +331,12 @@ export default function ProjectOverviewPage() {
                       canManageMembers && ['analyst', 'guest'].includes(m.role);
                     return (
                       <tr key={m.id} className="border-b border-border last:border-0">
-                        <td className="py-2 font-medium text-text-primary">{m.name}</td>
+                        <td className="py-2">
+                          <div className="flex items-center gap-2.5 font-medium text-text-primary">
+                            <Avatar name={m.name} size="sm" />
+                            {m.name}
+                          </div>
+                        </td>
                         <td className="py-2 text-text-secondary">{m.email}</td>
                         <td className="py-2">
                           <Badge variant={roleVariant(m.role)}>{m.role.replace('_', ' ')}</Badge>

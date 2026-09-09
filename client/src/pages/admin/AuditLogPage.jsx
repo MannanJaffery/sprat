@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, ScrollText } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import QueryState from '../../components/QueryState';
 import Badge from '../../components/Badge';
+import Avatar from '../../components/Avatar';
 import { SelectField, TextField } from '../../components/FormField';
 import * as auditLogsApi from '../../api/auditLogs';
 
@@ -35,6 +36,8 @@ export default function AuditLogPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        icon={ScrollText}
+        eyebrow={logsQuery.data ? `${logsQuery.data.total} entries` : undefined}
         title="Access Log"
         description="Every create, update, and delete action in SPRAT. Append-only and tamper-evident (SR-1 / NFR4)."
       />
@@ -93,9 +96,14 @@ export default function AuditLogPage() {
                 </thead>
                 <tbody>
                   {data.rows.map((log) => (
-                    <tr key={log.id} className="border-b border-border last:border-0">
+                    <tr key={log.id} className="border-b border-border transition-colors last:border-0 hover:bg-surface-soft/60">
                       <td className="px-4 py-3 text-text-secondary">{log.occurred_at}</td>
-                      <td className="px-4 py-3 text-text-primary">{log.user_name || 'Unknown'}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2 text-text-primary">
+                          <Avatar name={log.user_name || '?'} size="sm" />
+                          {log.user_name || 'Unknown'}
+                        </div>
+                      </td>
                       <td className="px-4 py-3">
                         <Badge variant={ACTION_VARIANT[log.action]}>{log.action}</Badge>
                       </td>

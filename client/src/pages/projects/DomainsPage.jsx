@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Tags } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import QueryState from '../../components/QueryState';
 import EmptyState from '../../components/EmptyState';
@@ -11,6 +12,7 @@ import { TextField } from '../../components/FormField';
 import { useAuth } from '../../hooks/useAuth';
 import * as projectsApi from '../../api/projects';
 import { getErrorMessage } from '../../api/client';
+import { staggerContainer, staggerItem } from '../../lib/motion';
 
 export default function DomainsPage() {
   const { projectId } = useParams();
@@ -63,6 +65,8 @@ export default function DomainsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        icon={Tags}
+        eyebrow={`${domainsQuery.data?.length ?? '…'} domains`}
         title="Domains"
         description="Categorize policy documents (e.g. Healthcare, Financial, E-commerce)."
       />
@@ -94,9 +98,9 @@ export default function DomainsPage() {
           domains.length === 0 ? (
             <EmptyState title="No domains yet" description="Add one above to start organizing documents." />
           ) : (
-            <div className="card divide-y divide-border p-0">
+            <motion.div initial="hidden" animate="show" variants={staggerContainer} className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
               {domains.map((d) => (
-                <div key={d.id} className="flex items-center justify-between px-4 py-3">
+                <motion.div key={d.id} variants={staggerItem} className="card card-hover flex items-center justify-between">
                   {editingId === d.id ? (
                     <input
                       className="input mr-3 max-w-xs"
@@ -105,7 +109,12 @@ export default function DomainsPage() {
                       autoFocus
                     />
                   ) : (
-                    <span className="text-sm font-medium text-text-primary">{d.name}</span>
+                    <span className="flex items-center gap-2.5 text-sm font-medium text-text-primary">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 text-primary-600">
+                        <Tags size={14} />
+                      </span>
+                      {d.name}
+                    </span>
                   )}
                   {canManage && (
                     <div className="flex gap-2">
@@ -143,9 +152,9 @@ export default function DomainsPage() {
                       )}
                     </div>
                   )}
-                </div>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           )
         }
       </QueryState>

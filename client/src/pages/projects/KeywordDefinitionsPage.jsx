@@ -74,6 +74,8 @@ export default function KeywordDefinitionsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        icon={BookMarked}
+        eyebrow={`${query.data?.length ?? '…'} definitions`}
         title="Keyword Definitions"
         description="Shared definitions of goal keywords (FR-GSM 14). Lock a definition to protect it (FR-GSM 15)."
       />

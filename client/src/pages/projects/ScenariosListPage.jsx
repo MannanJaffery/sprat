@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { Plus, GitBranch } from 'lucide-react';
+import { Plus, GitBranch, ChevronRight, Target } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import QueryState from '../../components/QueryState';
 import EmptyState from '../../components/EmptyState';
@@ -12,6 +13,7 @@ import ScenarioForm from '../../components/ScenarioForm';
 import { useAuth } from '../../hooks/useAuth';
 import * as scenariosApi from '../../api/scenarios';
 import { getErrorMessage } from '../../api/client';
+import { staggerContainer, staggerItem } from '../../lib/motion';
 
 const STATUS_VARIANT = { draft: 'neutral', active: 'primary', resolved: 'success' };
 
@@ -42,6 +44,8 @@ export default function ScenariosListPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        icon={GitBranch}
+        eyebrow={`${scenariosQuery.data?.length ?? '…'} scenarios`}
         title="Scenarios"
         description="Concrete usage situations that instantiate one or more goals."
         actions={
@@ -62,21 +66,33 @@ export default function ScenariosListPage() {
               description="Create a scenario and link it to the goals it instantiates."
             />
           ) : (
-            <div className="card divide-y divide-border p-0">
+            <motion.div initial="hidden" animate="show" variants={staggerContainer} className="space-y-2.5">
               {scenarios.map((s) => (
-                <button
+                <motion.button
                   key={s.id}
+                  variants={staggerItem}
+                  whileHover={{ x: 2 }}
                   onClick={() => navigate(`/projects/${projectId}/scenarios/${s.id}`)}
-                  className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-background"
+                  className="card card-hover flex w-full items-center justify-between text-left"
                 >
-                  <div>
-                    <p className="text-sm font-medium text-text-primary">{s.name}</p>
-                    <p className="text-xs text-text-secondary">{s.goals.length} linked goal(s)</p>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600">
+                      <GitBranch size={16} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-text-primary">{s.name}</p>
+                      <p className="flex items-center gap-1 text-xs text-text-secondary">
+                        <Target size={11} /> {s.goals.length} linked goal(s)
+                      </p>
+                    </div>
                   </div>
-                  <Badge variant={STATUS_VARIANT[s.status]}>{s.status}</Badge>
-                </button>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={STATUS_VARIANT[s.status]}>{s.status}</Badge>
+                    <ChevronRight size={16} className="text-text-muted" />
+                  </div>
+                </motion.button>
               ))}
-            </div>
+            </motion.div>
           )
         }
       </QueryState>

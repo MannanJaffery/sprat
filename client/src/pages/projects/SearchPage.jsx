@@ -48,6 +48,7 @@ export default function SearchPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        icon={SearchIcon}
         title="Search"
         description="Find goals and scenarios by any combination of attributes (FR-GSM 16/17, FR-SSM 7)."
       />

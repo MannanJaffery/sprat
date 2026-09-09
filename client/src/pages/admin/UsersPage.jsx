@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { Plus, KeyRound, Ban, CheckCircle2 } from 'lucide-react';
+import { Plus, KeyRound, Ban, CheckCircle2, Users } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import QueryState from '../../components/QueryState';
 import Modal from '../../components/Modal';
 import Badge, { roleVariant } from '../../components/Badge';
+import Avatar from '../../components/Avatar';
 import { TextField, SelectField } from '../../components/FormField';
 import * as usersApi from '../../api/users';
 import { getErrorMessage } from '../../api/client';
@@ -147,6 +148,8 @@ export default function UsersPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        icon={Users}
+        eyebrow={`${usersQuery.data?.length ?? '…'} users`}
         title="Manage Users"
         description="Create Project Managers, Analysts, and Guests; reset passwords; disable accounts without losing their data."
         actions={
@@ -172,8 +175,13 @@ export default function UsersPage() {
               </thead>
               <tbody>
                 {users.map((u) => (
-                  <tr key={u.id} className="border-b border-border last:border-0">
-                    <td className="px-4 py-3 font-medium text-text-primary">{u.name}</td>
+                  <tr key={u.id} className="border-b border-border transition-colors last:border-0 hover:bg-surface-soft/60">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2.5 font-medium text-text-primary">
+                        <Avatar name={u.name} size="sm" />
+                        {u.name}
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-text-secondary">{u.email}</td>
                     <td className="px-4 py-3">
                       <Badge variant={roleVariant(u.role)}>{u.role.replace('_', ' ')}</Badge>

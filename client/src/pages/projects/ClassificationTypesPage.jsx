@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { Plus, Check, X, Tags } from 'lucide-react';
+import { Plus, Check, X, Tags, SlidersHorizontal } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import QueryState from '../../components/QueryState';
 import EmptyState from '../../components/EmptyState';
@@ -66,6 +66,7 @@ export default function ClassificationTypesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        icon={SlidersHorizontal}
         title="Classification Dimensions"
         description="Goal classification categories beyond the three built-in ones (FR-GSM 5/6)."
       />

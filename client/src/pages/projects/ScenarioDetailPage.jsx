@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { ArrowLeft, Pencil, Trash2, Link2, X } from 'lucide-react';
+import { ArrowLeft, Pencil, Trash2, Link2, X, GitBranch } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import QueryState from '../../components/QueryState';
 import ConfirmDialog from '../../components/ConfirmDialog';
@@ -134,6 +134,7 @@ export default function ScenarioDetailPage() {
         {(scenario) => (
           <>
             <PageHeader
+              icon={GitBranch}
               title={scenario.name}
               description={<Badge variant={STATUS_VARIANT[scenario.status]}>{scenario.status}</Badge>}
               actions={
@@ -199,10 +200,12 @@ export default function ScenarioDetailPage() {
                   {scenario.goals.map((g) => (
                     <li
                       key={g.id}
-                      className="flex items-center justify-between rounded-lg bg-background px-3 py-2 text-sm"
+                      className="flex items-center justify-between rounded-lg border border-border bg-surface-soft px-3 py-2.5 text-sm"
                     >
                       <span className="text-text-primary">
-                        <span className="font-mono text-xs text-text-secondary">{g.goal_code}</span>{' '}
+                        <span className="rounded bg-surface px-1.5 py-0.5 font-mono text-xs text-text-secondary">
+                          {g.goal_code}
+                        </span>{' '}
                         {g.description}
                       </span>
                       {canManage && (
