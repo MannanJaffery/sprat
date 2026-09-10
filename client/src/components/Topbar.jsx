@@ -1,6 +1,6 @@
 import { Menu, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
-import { LogOut, Search } from 'lucide-react';
+import { LogOut, Search, Menu as MenuIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import Avatar from './Avatar';
@@ -15,7 +15,7 @@ const ROLE_LABELS = {
   guest: 'Guest',
 };
 
-export default function Topbar() {
+export default function Topbar({ onOpenSidebar }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -36,18 +36,30 @@ export default function Topbar() {
   };
 
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-border bg-surface px-6">
-      <Breadcrumbs />
+    <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-border bg-surface px-4 sm:px-6">
+      <div className="flex min-w-0 items-center gap-3">
+        <button
+          type="button"
+          onClick={onOpenSidebar}
+          className="rounded-lg p-1.5 text-text-secondary hover:bg-background hover:text-text-primary lg:hidden"
+          aria-label="Open menu"
+        >
+          <MenuIcon size={20} />
+        </button>
+        <div className="min-w-0">
+          <Breadcrumbs />
+        </div>
+      </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex shrink-0 items-center gap-2 sm:gap-3">
         <button
           type="button"
           onClick={openPalette}
-          className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-text-secondary transition-colors hover:border-primary-300 hover:text-text-primary"
+          className="flex items-center gap-2 rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm text-text-secondary transition-colors hover:border-primary-300 hover:text-text-primary sm:px-3"
         >
           <Search size={14} />
-          Search
-          <kbd className="ml-2 rounded border border-border bg-surface px-1.5 py-0.5 text-[10px] text-text-muted">
+          <span className="hidden sm:inline">Search</span>
+          <kbd className="ml-1 hidden rounded border border-border bg-surface px-1.5 py-0.5 text-[10px] text-text-muted sm:ml-2 sm:inline">
             ⌘K
           </kbd>
         </button>
