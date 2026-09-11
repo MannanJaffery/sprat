@@ -16,7 +16,7 @@ async function query(text, params) {
   return result.rows;
 }
 
-// Convenience for the common "expect zero or one row" case (replaces better-sqlite3's `.get()`).
+// Convenience for the common "expect zero or one row" case.
 async function queryOne(text, params) {
   const rows = await query(text, params);
   return rows[0];
