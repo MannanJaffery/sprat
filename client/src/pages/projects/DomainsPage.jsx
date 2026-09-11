@@ -13,6 +13,7 @@ import { useAuth } from '../../hooks/useAuth';
 import * as projectsApi from '../../api/projects';
 import { getErrorMessage } from '../../api/client';
 import { staggerContainer, staggerItem } from '../../lib/motion';
+import { DOMAIN_PRESETS } from '../../constants/domains';
 
 export default function DomainsPage() {
   const { projectId } = useParams();
@@ -77,19 +78,36 @@ export default function DomainsPage() {
             e.preventDefault();
             createDomain.mutate();
           }}
-          className="card flex items-end gap-3"
+          className="card space-y-3"
         >
-          <div className="flex-1">
-            <TextField
-              label="New domain name"
-              required
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-            />
+          <div className="flex items-end gap-3">
+            <div className="flex-1">
+              <TextField
+                label="New domain name"
+                required
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="e.g. Healthcare, or type your own"
+              />
+            </div>
+            <button type="submit" className="btn-primary" disabled={createDomain.isPending}>
+              <Plus size={16} /> Add domain
+            </button>
           </div>
-          <button type="submit" className="btn-primary" disabled={createDomain.isPending}>
-            <Plus size={16} /> Add domain
-          </button>
+          <div className="flex flex-wrap gap-1.5">
+            {DOMAIN_PRESETS.filter(
+              (preset) => !(domainsQuery.data || []).some((d) => d.name.toLowerCase() === preset.toLowerCase())
+            ).map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => setNewName(preset)}
+                className="rounded-full border border-border bg-surface-soft px-3 py-1 text-xs text-text-secondary transition-colors hover:border-primary-300 hover:text-primary-700"
+              >
+                {preset}
+              </button>
+            ))}
+          </div>
         </form>
       )}
 

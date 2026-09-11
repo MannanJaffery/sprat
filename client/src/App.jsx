@@ -2,7 +2,10 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import AppShell from './components/AppShell';
 import ProtectedRoute from './components/ProtectedRoute';
 
+import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
+import OnboardingPage from './pages/OnboardingPage';
 import ProjectListPage from './pages/projects/ProjectListPage';
 import ProjectOverviewPage from './pages/projects/ProjectOverviewPage';
 import DomainsPage from './pages/projects/DomainsPage';
@@ -23,16 +26,19 @@ import AuditLogPage from './pages/admin/AuditLogPage';
 export default function App() {
   return (
     <Routes>
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignupPage />} />
+      <Route path="/onboarding" element={<OnboardingPage />} />
 
       <Route
+        path="/"
         element={
           <ProtectedRoute>
             <AppShell />
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="/projects" replace />} />
         <Route path="projects" element={<ProjectListPage />} />
         <Route path="projects/:projectId/overview" element={<ProjectOverviewPage />} />
         <Route path="projects/:projectId/domains" element={<DomainsPage />} />
@@ -54,14 +60,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="admin/user-groups"
-          element={
-            <ProtectedRoute roles={['admin']}>
-              <UserGroupsPage />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="admin/user-groups" element={<UserGroupsPage />} />
         <Route
           path="admin/audit-log"
           element={

@@ -1,102 +1,127 @@
-const bcrypt = require('bcrypt');
 const db = require('../../db/connection');
-const { NotFoundError, ConflictError } = require('../utils/errors');
+const { NotFoundError, ConflictError, ForbiddenError } = require('../utils/errors');
 
-const SALT_ROUNDS = 12;
+const PUBLIC_COLUMNS = 'id, name, email, role, user_group_id, status, created_at, updated_at';
 
-const PUBLIC_COLUMNS = `id, name, email, role, user_group_id, status, created_at, updated_at`;
-
-function listUsers() {
-  return db
-    .prepare(
-      `SELECT u.id, u.name, u.email, u.role, u.user_group_id, u.status, u.created_at, u.updated_at,
-              g.name AS user_group_name
-       FROM users u LEFT JOIN user_groups g ON g.id = u.user_group_id
-       ORDER BY u.created_at DESC`
-    )
-    .all();
+// Only accounts an admin has actually approved (role assigned) — pending signups,
+// whether or not they've submitted an onboarding request yet, have their own list
+// (see listPendingSignups) and must never show up here with a null role.
+async function listUsers() {
+  return db.query(
+    `SELECT u.id, u.name, u.email, u.role, u.user_group_id, u.status, u.created_at, u.updated_at,
+            g.name AS user_group_name
+     FROM profiles u LEFT JOIN user_groups g ON g.id = u.user_group_id
+     WHERE u.role IS NOT NULL
+     ORDER BY u.created_at DESC`
+  );
 }
 
-function getUserById(id) {
-  const user = db.prepare(`SELECT ${PUBLIC_COLUMNS} FROM users WHERE id = ?`).get(id);
+async function getUserById(id) {
+  const user = await db.queryOne(`SELECT ${PUBLIC_COLUMNS} FROM profiles WHERE id = $1`, [id]);
   if (!user) throw new NotFoundError('User not found');
   return user;
 }
 
-function findByEmailWithPassword(email) {
-  return db.prepare('SELECT * FROM users WHERE email = ?').get(email);
-}
-
-// FR-UA 1b: admin creates project managers, analysts, and guests.
-function createUser({ name, email, password, role, userGroupId }) {
-  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
-  if (existing) throw new ConflictError('A user with this email already exists.');
-
-  const hash = bcrypt.hashSync(password, SALT_ROUNDS); // NFR2: never store plaintext
-  const info = db
-    .prepare(
-      `INSERT INTO users (name, email, password_hash, role, user_group_id)
-       VALUES (?, ?, ?, ?, ?)`
-    )
-    .run(name, email, hash, role, userGroupId || null);
-
-  return getUserById(info.lastInsertRowid);
-}
-
-function updateUser(id, { name, userGroupId }) {
-  getUserById(id);
-  db.prepare(
-    `UPDATE users SET name = COALESCE(?, name), user_group_id = ?, updated_at = datetime('now')
-     WHERE id = ?`
-  ).run(name ?? null, userGroupId ?? null, id);
-  return getUserById(id);
-}
-
-// FR-UA 1d: disabling removes access while preserving all data the user entered.
-function setUserStatus(id, status) {
-  getUserById(id);
-  db.prepare(`UPDATE users SET status = ?, updated_at = datetime('now') WHERE id = ?`).run(
-    status,
-    id
+// Accounts that finished onboarding (submitted a requested role) and are awaiting
+// an admin's decision.
+async function listPendingSignups() {
+  return db.query(
+    `SELECT id, name, email, requested_role, created_at
+     FROM profiles
+     WHERE status = 'pending' AND requested_role IS NOT NULL
+     ORDER BY created_at ASC`
   );
-  return getUserById(id);
 }
 
-// FR-UA 2d: a project manager assigns an analyst (or guest) to a user group
-// created by the administrator. Pass null to clear the assignment.
-function setUserGroup(id, userGroupId) {
-  const user = getUserById(id);
+// Called once, right after Supabase Auth creates the account, with the name and
+// intended role the user picked during onboarding. Never sets role directly —
+// that only happens when an admin approves the request.
+async function submitOnboarding(id, { name, requestedRole }) {
+  const updated = await db.queryOne(
+    `UPDATE profiles SET name = $1, requested_role = $2, updated_at = now()
+     WHERE id = $3
+     RETURNING ${PUBLIC_COLUMNS}`,
+    [name, requestedRole, id]
+  );
+  if (!updated) throw new NotFoundError('Account not found');
+  return updated;
+}
+
+// An admin approves a pending signup, assigning a real (never admin) role.
+async function approveSignup(id, role) {
+  if (role === 'admin') {
+    throw new ForbiddenError('Admin accounts cannot be created through the app.');
+  }
+  const profile = await getUserById(id);
+  if (profile.status !== 'pending') {
+    throw new ConflictError('This account is not a pending signup.');
+  }
+  return db.queryOne(
+    `UPDATE profiles SET role = $1, status = 'active', updated_at = now()
+     WHERE id = $2
+     RETURNING ${PUBLIC_COLUMNS}`,
+    [role, id]
+  );
+}
+
+async function rejectSignup(id) {
+  const profile = await getUserById(id);
+  if (profile.status !== 'pending') {
+    throw new ConflictError('This account is not a pending signup.');
+  }
+  await db.query(`UPDATE profiles SET status = 'disabled', updated_at = now() WHERE id = $1`, [id]);
+}
+
+async function updateUser(id, { name, userGroupId }) {
+  await getUserById(id);
+  return db.queryOne(
+    `UPDATE profiles SET name = COALESCE($1, name), user_group_id = $2, updated_at = now()
+     WHERE id = $3
+     RETURNING ${PUBLIC_COLUMNS}`,
+    [name ?? null, userGroupId ?? null, id]
+  );
+}
+
+// Disabling removes access while preserving all data the user entered. Admin
+// accounts can never be disabled — through this function or any other path.
+async function setUserStatus(id, status) {
+  const user = await getUserById(id);
+  if (status === 'disabled' && user.role === 'admin') {
+    throw new ForbiddenError('Admin accounts cannot be disabled.');
+  }
+  return db.queryOne(
+    `UPDATE profiles SET status = $1, updated_at = now() WHERE id = $2 RETURNING ${PUBLIC_COLUMNS}`,
+    [status, id]
+  );
+}
+
+// A project manager assigns an analyst (or guest) to a user group created by
+// the administrator. Pass null to clear the assignment.
+async function setUserGroup(id, userGroupId) {
+  const user = await getUserById(id);
   if (!['analyst', 'guest'].includes(user.role)) {
     throw new ConflictError('Only analysts and guests can be assigned to a user group.');
   }
   if (userGroupId != null) {
-    const group = db.prepare('SELECT id FROM user_groups WHERE id = ?').get(userGroupId);
+    const group = await db.queryOne('SELECT id FROM user_groups WHERE id = $1', [userGroupId]);
     if (!group) throw new NotFoundError('User group not found');
   }
-  db.prepare(`UPDATE users SET user_group_id = ?, updated_at = datetime('now') WHERE id = ?`).run(
-    userGroupId ?? null,
-    id
-  );
-  return getUserById(id);
-}
-
-// FR-UA 1c: admin can reset any user's password.
-function resetPassword(id, newPassword) {
-  getUserById(id);
-  const hash = bcrypt.hashSync(newPassword, SALT_ROUNDS);
-  db.prepare(`UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?`).run(
-    hash,
-    id
+  return db.queryOne(
+    `UPDATE profiles SET user_group_id = $1, updated_at = now()
+     WHERE id = $2
+     RETURNING ${PUBLIC_COLUMNS}`,
+    [userGroupId ?? null, id]
   );
 }
 
 module.exports = {
   listUsers,
   getUserById,
-  findByEmailWithPassword,
-  createUser,
+  listPendingSignups,
+  submitOnboarding,
+  approveSignup,
+  rejectSignup,
   updateUser,
   setUserStatus,
   setUserGroup,
-  resetPassword,
 };

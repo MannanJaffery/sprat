@@ -2,11 +2,11 @@ const asyncHandler = require('../utils/asyncHandler');
 const domainsService = require('../services/domains');
 
 const list = asyncHandler(async (req, res) => {
-  res.json(domainsService.listDomains(req.params.projectId));
+  res.json(await domainsService.listDomains(req.params.projectId));
 });
 
 const create = asyncHandler(async (req, res) => {
-  const domain = domainsService.createDomain(req.params.projectId, {
+  const domain = await domainsService.createDomain(req.params.projectId, {
     name: req.body.name,
     createdBy: req.user.id,
   });
@@ -15,13 +15,13 @@ const create = asyncHandler(async (req, res) => {
 });
 
 const update = asyncHandler(async (req, res) => {
-  const domain = domainsService.updateDomain(req.params.domainId, { name: req.body.name });
+  const domain = await domainsService.updateDomain(req.params.domainId, { name: req.body.name });
   res.locals.audit({ action: 'update', objectType: 'domain', objectId: domain.id });
   res.json(domain);
 });
 
 const remove = asyncHandler(async (req, res) => {
-  domainsService.deleteDomain(req.params.domainId);
+  await domainsService.deleteDomain(req.params.domainId);
   res.locals.audit({ action: 'delete', objectType: 'domain', objectId: Number(req.params.domainId) });
   res.status(204).send();
 });

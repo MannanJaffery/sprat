@@ -12,13 +12,15 @@ import Badge from '../../components/Badge';
 import GoalForm from '../../components/GoalForm';
 import ClassificationPanel from '../../components/ClassificationPanel';
 import TraceabilityPanel from '../../components/TraceabilityPanel';
+import GoalGrammarPanel from '../../components/GoalGrammarPanel';
+import GoalCrossReferencePanel from '../../components/GoalCrossReferencePanel';
 import { SelectField } from '../../components/FormField';
 import { useAuth } from '../../hooks/useAuth';
 import * as goalsApi from '../../api/goals';
 import * as documentsApi from '../../api/documents';
 import { getErrorMessage } from '../../api/client';
 
-const TABS = ['Details', 'Classification & Compare', 'Traceability'];
+const TABS = ['Details', 'Classification & Compare', 'Traceability', 'Cross-Reference', 'Grammar Check'];
 
 function ReplaceGoalModal({ open, onClose, projectId, goalId, allGoals }) {
   const navigate = useNavigate();
@@ -44,7 +46,7 @@ function ReplaceGoalModal({ open, onClose, projectId, goalId, allGoals }) {
     <Modal open={open} onClose={onClose} title="Replace this goal" size="sm">
       <p className="mb-4 text-sm text-text-secondary">
         This goal will be deleted and every policy/scenario it appears in will be automatically
-        re-linked to the replacement goal (FR-GSM 9).
+        re-linked to the replacement goal.
       </p>
       <SelectField label="Replacement goal" value={newGoalId} onChange={(e) => setNewGoalId(e.target.value)}>
         <option value="">Select a goal…</option>
@@ -237,6 +239,10 @@ export default function GoalDetailPage() {
             )}
 
             {tab === 'Traceability' && <TraceabilityPanel projectId={projectId} goalId={goalId} />}
+
+            {tab === 'Cross-Reference' && <GoalCrossReferencePanel projectId={projectId} goalId={goalId} />}
+
+            {tab === 'Grammar Check' && <GoalGrammarPanel projectId={projectId} goalId={goalId} />}
 
             <ConfirmDialog
               open={deleteOpen}

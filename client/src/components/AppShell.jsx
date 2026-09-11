@@ -5,6 +5,7 @@ import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import CommandPalette from './CommandPalette';
 import PageTransition from './PageTransition';
+import ChatWidget from './ChatWidget';
 
 export default function AppShell() {
   const location = useLocation();
@@ -38,6 +39,7 @@ export default function AppShell() {
         </main>
       </div>
       <CommandPalette />
+      <ChatWidget />
     </div>
   );
 }

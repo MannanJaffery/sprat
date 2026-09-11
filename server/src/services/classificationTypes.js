@@ -30,105 +30,111 @@ function rowToType(row) {
   };
 }
 
-// FR-GSM 5: project-defined goal classification dimensions.
-function listTypes(projectId) {
-  return db
-    .prepare('SELECT * FROM classification_types WHERE project_id = ? ORDER BY created_at')
-    .all(projectId)
-    .map(rowToType);
+// Project-defined goal classification dimensions.
+async function listTypes(projectId) {
+  const rows = await db.query('SELECT * FROM classification_types WHERE project_id = $1 ORDER BY created_at', [
+    projectId,
+  ]);
+  return rows.map(rowToType);
 }
 
-function getTypeById(id) {
-  const row = db.prepare('SELECT * FROM classification_types WHERE id = ?').get(id);
+async function getTypeById(id, executor = db) {
+  const row = await executor.queryOne('SELECT * FROM classification_types WHERE id = $1', [id]);
   if (!row) throw new NotFoundError('Classification type not found');
   return row;
 }
 
-function createType(projectId, { label, options, createdBy }) {
+// Shared by both the direct "PM adds a dimension" path and "request approved" path.
+async function createTypeWithExecutor(executor, projectId, { label, options, createdBy }) {
   const cleanLabel = String(label || '').trim();
   if (!cleanLabel) throw new ApiError(400, 'A label is required.');
   const parsedOptions = parseOptions(options);
 
   let key = slugify(cleanLabel) || 'type';
-  const existing = db
-    .prepare('SELECT type_key FROM classification_types WHERE project_id = ? AND type_key LIKE ?')
-    .all(projectId, `${key}%`)
-    .map((r) => r.type_key);
+  const existingRows = await executor.query(
+    'SELECT type_key FROM classification_types WHERE project_id = $1 AND type_key LIKE $2',
+    [projectId, `${key}%`]
+  );
+  const existing = existingRows.map((r) => r.type_key);
   if (existing.includes(key)) {
     let n = 2;
     while (existing.includes(`${key}_${n}`)) n += 1;
     key = `${key}_${n}`;
   }
 
-  const nameClash = db
-    .prepare('SELECT id FROM classification_types WHERE project_id = ? AND label = ?')
-    .get(projectId, cleanLabel);
+  const nameClash = await executor.queryOne(
+    'SELECT id FROM classification_types WHERE project_id = $1 AND label = $2',
+    [projectId, cleanLabel]
+  );
   if (nameClash) throw new ConflictError('A classification type with this label already exists.');
 
-  const info = db
-    .prepare(
-      `INSERT INTO classification_types (project_id, type_key, label, options, created_by)
-       VALUES (?, ?, ?, ?, ?)`
-    )
-    .run(projectId, key, cleanLabel, JSON.stringify(parsedOptions), createdBy);
-  return rowToType(getTypeById(info.lastInsertRowid));
+  const inserted = await executor.queryOne(
+    `INSERT INTO classification_types (project_id, type_key, label, options, created_by)
+     VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+    [projectId, key, cleanLabel, JSON.stringify(parsedOptions), createdBy]
+  );
+  return rowToType(await getTypeById(inserted.id, executor));
 }
 
-// FR-GSM 6: an analyst requests a new classification type; a PM approves or rejects it.
-function listRequests(projectId) {
-  return db
-    .prepare(
-      `SELECT r.*, u.name AS requested_by_name, d.name AS decided_by_name
-       FROM classification_type_requests r
-       JOIN users u ON u.id = r.requested_by
-       LEFT JOIN users d ON d.id = r.decided_by
-       WHERE r.project_id = ?
-       ORDER BY r.created_at DESC`
-    )
-    .all(projectId)
-    .map((r) => ({ ...r, options: JSON.parse(r.options) }));
+async function createType(projectId, data) {
+  return createTypeWithExecutor(db, projectId, data);
 }
 
-function createRequest(projectId, { requestedBy, label, options, rationale }) {
+// An analyst requests a new classification type; a PM approves or rejects it.
+async function listRequests(projectId) {
+  const rows = await db.query(
+    `SELECT r.*, u.name AS requested_by_name, d.name AS decided_by_name
+     FROM classification_type_requests r
+     JOIN profiles u ON u.id = r.requested_by
+     LEFT JOIN profiles d ON d.id = r.decided_by
+     WHERE r.project_id = $1
+     ORDER BY r.created_at DESC`,
+    [projectId]
+  );
+  return rows.map((r) => ({ ...r, options: JSON.parse(r.options) }));
+}
+
+async function createRequest(projectId, { requestedBy, label, options, rationale }) {
   const cleanLabel = String(label || '').trim();
   if (!cleanLabel) throw new ApiError(400, 'A label is required.');
   const parsedOptions = parseOptions(options);
-  const info = db
-    .prepare(
-      `INSERT INTO classification_type_requests (project_id, requested_by, label, options, rationale)
-       VALUES (?, ?, ?, ?, ?)`
-    )
-    .run(projectId, requestedBy, cleanLabel, JSON.stringify(parsedOptions), rationale || null);
-  return db.prepare('SELECT * FROM classification_type_requests WHERE id = ?').get(info.lastInsertRowid);
+  return db.queryOne(
+    `INSERT INTO classification_type_requests (project_id, requested_by, label, options, rationale)
+     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+    [projectId, requestedBy, cleanLabel, JSON.stringify(parsedOptions), rationale || null]
+  );
 }
 
-const decideRequest = db.transaction((requestId, { decidedBy, decision }) => {
-  const request = db
-    .prepare('SELECT * FROM classification_type_requests WHERE id = ?')
-    .get(requestId);
-  if (!request) throw new NotFoundError('Request not found');
-  if (request.status !== 'pending') {
-    throw new ConflictError('This request has already been decided.');
-  }
+async function decideRequest(requestId, { decidedBy, decision }) {
+  return db.withTransaction(async (tx) => {
+    const request = await tx.queryOne('SELECT * FROM classification_type_requests WHERE id = $1', [
+      requestId,
+    ]);
+    if (!request) throw new NotFoundError('Request not found');
+    if (request.status !== 'pending') {
+      throw new ConflictError('This request has already been decided.');
+    }
 
-  let createdTypeId = null;
-  if (decision === 'approved') {
-    const type = createType(request.project_id, {
-      label: request.label,
-      options: JSON.parse(request.options),
-      createdBy: decidedBy,
-    });
-    createdTypeId = type.id;
-  }
+    let createdTypeId = null;
+    if (decision === 'approved') {
+      const type = await createTypeWithExecutor(tx, request.project_id, {
+        label: request.label,
+        options: JSON.parse(request.options),
+        createdBy: decidedBy,
+      });
+      createdTypeId = type.id;
+    }
 
-  db.prepare(
-    `UPDATE classification_type_requests
-     SET status = ?, decided_by = ?, decided_at = datetime('now'), created_type_id = ?
-     WHERE id = ?`
-  ).run(decision, decidedBy, createdTypeId, requestId);
+    await tx.query(
+      `UPDATE classification_type_requests
+       SET status = $1, decided_by = $2, decided_at = now(), created_type_id = $3
+       WHERE id = $4`,
+      [decision, decidedBy, createdTypeId, requestId]
+    );
 
-  return { requestId, status: decision, createdTypeId };
-});
+    return { requestId, status: decision, createdTypeId };
+  });
+}
 
 module.exports = {
   listTypes,

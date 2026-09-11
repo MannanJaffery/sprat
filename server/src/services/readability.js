@@ -2,9 +2,9 @@ const db = require('../../db/connection');
 const { NotFoundError } = require('../utils/errors');
 const { computeReadability } = require('../utils/flesch');
 
-// FR-FRE 1: Flesch Reading Ease Score + Flesch-Kincaid Grade Level for a policy document.
-function getDocumentReadability(documentId) {
-  const doc = db.prepare('SELECT id, name, content FROM documents WHERE id = ?').get(documentId);
+// Flesch Reading Ease Score + Flesch-Kincaid Grade Level for a policy document.
+async function getDocumentReadability(documentId) {
+  const doc = await db.queryOne('SELECT id, name, content FROM documents WHERE id = $1', [documentId]);
   if (!doc) throw new NotFoundError('Document not found');
 
   const metrics = computeReadability(doc.content);

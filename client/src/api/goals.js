@@ -37,3 +37,9 @@ export const submitClassifications = (projectId, goalId, values) =>
 
 export const getClassificationDiff = (projectId, goalId) =>
   client.get(`/projects/${projectId}/goals/${goalId}/classifications/diff`).then((r) => r.data);
+
+export const getGrammarCheck = (projectId, goalId) =>
+  client.get(`/projects/${projectId}/goals/${goalId}/grammar-check`).then((r) => r.data);
+
+export const getCrossReferences = (projectId, goalId) =>
+  client.get(`/projects/${projectId}/goals/${goalId}/cross-references`).then((r) => r.data);

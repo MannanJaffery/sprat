@@ -9,6 +9,18 @@ export const createProject = (payload) => client.post('/projects', payload).then
 export const listMembers = (projectId) =>
   client.get(`/projects/${projectId}/members`).then((r) => r.data);
 
+// Any user (not yet a member) can request to join; an admin/PM of the project decides.
+export const requestToJoinProject = (projectId, message) =>
+  client.post(`/projects/${projectId}/join-requests`, { message }).then((r) => r.data);
+
+export const listProjectJoinRequests = (projectId) =>
+  client.get(`/projects/${projectId}/join-requests`).then((r) => r.data);
+
+export const decideProjectJoinRequest = (projectId, requestId, decision) =>
+  client
+    .post(`/projects/${projectId}/join-requests/${requestId}/decide`, { decision })
+    .then((r) => r.data);
+
 export const addMember = (projectId, payload) =>
   client.post(`/projects/${projectId}/members`, payload).then((r) => r.data);
 

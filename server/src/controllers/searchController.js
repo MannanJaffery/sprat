@@ -4,14 +4,14 @@ const scenariosService = require('../services/scenarios');
 const documentsService = require('../services/documents');
 const { ForbiddenError } = require('../utils/errors');
 
-function domainOfDocument(projectId, documentId) {
-  const doc = documentsService.getDocumentById(documentId);
+async function domainOfDocument(projectId, documentId) {
+  const doc = await documentsService.getDocumentById(documentId);
   if (doc.project_id !== Number(projectId)) throw new ForbiddenError('Document does not belong to this project.');
   return doc.domain_id;
 }
 
-// FR8 (FR-GSM 16/17, FR-SSM 7): a single attribute-based search across goals and
-// scenarios in a project. Guest domain restrictions are applied to the goal results.
+// A single attribute-based search across goals and scenarios in a project. Guest
+// domain restrictions are applied to the goal results.
 const search = asyncHandler(async (req, res) => {
   const { projectId } = req.params;
 
@@ -26,17 +26,19 @@ const search = asyncHandler(async (req, res) => {
     documentId: req.query.documentId,
     search: req.query.q,
   };
-  let goals = goalsService.listGoals(projectId, goalFilters);
+  let goals = await goalsService.listGoals(projectId, goalFilters);
 
   const { restricted, allowedDomainIds } = req.projectMembership;
   if (restricted) {
-    goals = goals.filter((g) => {
-      const domainId = domainOfDocument(projectId, g.document_id);
-      return domainId != null && allowedDomainIds.includes(domainId);
-    });
+    const visible = [];
+    for (const g of goals) {
+      const domainId = await domainOfDocument(projectId, g.document_id);
+      if (domainId != null && allowedDomainIds.includes(domainId)) visible.push(g);
+    }
+    goals = visible;
   }
 
-  const scenarios = scenariosService.listScenarios(projectId, {
+  const scenarios = await scenariosService.listScenarios(projectId, {
     status: req.query.status,
     actor: req.query.actor,
     goalId: req.query.goalId,

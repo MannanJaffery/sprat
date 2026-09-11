@@ -10,6 +10,8 @@ import EmptyState from '../../components/EmptyState';
 import Modal from '../../components/Modal';
 import Badge from '../../components/Badge';
 import GoalForm from '../../components/GoalForm';
+import ConflictDetectorCard from '../../components/ConflictDetectorCard';
+import AiSummaryCard from '../../components/AiSummaryCard';
 import { useAuth } from '../../hooks/useAuth';
 import * as goalsApi from '../../api/goals';
 import * as documentsApi from '../../api/documents';
@@ -61,6 +63,13 @@ export default function GoalsListPage() {
           )
         }
       />
+
+      {canManage && goalsQuery.data?.length > 1 && (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <ConflictDetectorCard projectId={projectId} />
+          <AiSummaryCard projectId={projectId} />
+        </div>
+      )}
 
       <div className="relative max-w-sm">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />

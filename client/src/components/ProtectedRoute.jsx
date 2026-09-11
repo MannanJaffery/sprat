@@ -11,6 +11,12 @@ export default function ProtectedRoute({ roles, children }) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // A brand-new signup has no role yet — send them to finish onboarding (or wait
+  // for admin approval) instead of into the app shell.
+  if (user.status === 'pending' && location.pathname !== '/onboarding') {
+    return <Navigate to="/onboarding" replace />;
+  }
+
   if (roles && !roles.includes(user.role)) {
     return <Navigate to="/" replace />;
   }

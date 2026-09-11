@@ -9,7 +9,8 @@ function errorHandler(err, req, res, next) {
     });
   }
 
-  if (err && err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+  if (err && err.code === '23505') {
+    // Postgres unique_violation
     return res.status(409).json({ error: 'A record with these details already exists.' });
   }
 

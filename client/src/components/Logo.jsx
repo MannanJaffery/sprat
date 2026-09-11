@@ -1,0 +1,44 @@
+// Brand mark: a faceted, dual-tone shield with a keyhole cut through its
+// center — protection (shield) + privacy (keyhole) as one glyph, rendered as
+// plain SVG so it stays crisp at favicon size and never looks like a stock icon.
+export default function Logo({ size = 36, className = '' }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 40 40"
+      className={className}
+      role="img"
+      aria-label="SPRAT"
+    >
+      <defs>
+        <linearGradient id="sprat-logo-face" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#E7C685" />
+          <stop offset="55%" stopColor="#B4863A" />
+          <stop offset="100%" stopColor="#6B5115" />
+        </linearGradient>
+        <linearGradient id="sprat-logo-shade" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#6B5115" />
+          <stop offset="100%" stopColor="#2E2108" />
+        </linearGradient>
+        <clipPath id="sprat-logo-clip">
+          <path d="M20 2.6 L34 8.4 V20 C34 28.6 28 34.6 20 37.4 C12 34.6 6 28.6 6 20 V8.4 Z" />
+        </clipPath>
+        <mask id="sprat-logo-keyhole">
+          <rect x="0" y="0" width="40" height="40" fill="#fff" />
+          <circle cx="20" cy="15.6" r="3.3" fill="#000" />
+          <path d="M17.7 17.6 L22.3 17.6 L20.8 25.4 L19.2 25.4 Z" fill="#000" />
+        </mask>
+      </defs>
+
+      <g clipPath="url(#sprat-logo-clip)">
+        <rect x="0" y="0" width="40" height="40" fill="#FBF1DC" />
+        <g mask="url(#sprat-logo-keyhole)">
+          <rect x="0" y="0" width="40" height="40" fill="url(#sprat-logo-face)" />
+          <path d="M40 -2 L40 40 L11 40 Z" fill="url(#sprat-logo-shade)" opacity="0.9" />
+          <path d="M6 8.4 L20 2.6 L20 13 L6 17 Z" fill="#fff" opacity="0.12" />
+        </g>
+      </g>
+    </svg>
+  );
+}

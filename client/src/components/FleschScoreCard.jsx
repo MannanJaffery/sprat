@@ -14,7 +14,7 @@ export default function FleschScoreCard({ data }) {
   return (
     <div className="card space-y-4">
       <h2 className="text-base font-semibold text-text-primary">
-        Flesch Readability (FR-FRE 1)
+        Flesch Readability
       </h2>
 
       {data.fres == null ? (

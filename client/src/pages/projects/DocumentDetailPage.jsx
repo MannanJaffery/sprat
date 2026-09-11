@@ -47,7 +47,7 @@ export default function DocumentDetailPage() {
 
         <div className="card space-y-4">
           <h2 className="text-base font-semibold text-text-primary">
-            Goal Occurrence Analytics (FR-GSM 11/12)
+            Goal Occurrence Analytics
           </h2>
           <QueryState query={distinctCountQuery}>
             {(data) => (

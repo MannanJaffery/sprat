@@ -3,7 +3,7 @@ const documentsService = require('../services/documents');
 const { assertDomainAllowed } = require('../middleware/projectAccess');
 
 const list = asyncHandler(async (req, res) => {
-  const docs = documentsService.listDocuments(req.params.projectId, {
+  const docs = await documentsService.listDocuments(req.params.projectId, {
     domainId: req.query.domainId,
   });
   const { restricted, allowedDomainIds } = req.projectMembership;
@@ -14,13 +14,13 @@ const list = asyncHandler(async (req, res) => {
 });
 
 const getOne = asyncHandler(async (req, res) => {
-  const doc = documentsService.getDocumentById(req.params.documentId);
+  const doc = await documentsService.getDocumentById(req.params.documentId);
   assertDomainAllowed(req, doc.domain_id);
   res.json(doc);
 });
 
 const create = asyncHandler(async (req, res) => {
-  const doc = documentsService.createDocument(req.params.projectId, {
+  const doc = await documentsService.createDocument(req.params.projectId, {
     ...req.body,
     createdBy: req.user.id,
   });
@@ -29,13 +29,13 @@ const create = asyncHandler(async (req, res) => {
 });
 
 const update = asyncHandler(async (req, res) => {
-  const doc = documentsService.updateDocument(req.params.documentId, req.body);
+  const doc = await documentsService.updateDocument(req.params.documentId, req.body);
   res.locals.audit({ action: 'update', objectType: 'document', objectId: doc.id });
   res.json(doc);
 });
 
 const remove = asyncHandler(async (req, res) => {
-  documentsService.deleteDocument(req.params.documentId);
+  await documentsService.deleteDocument(req.params.documentId);
   res.locals.audit({ action: 'delete', objectType: 'document', objectId: Number(req.params.documentId) });
   res.status(204).send();
 });

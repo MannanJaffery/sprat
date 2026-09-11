@@ -1,8 +1,8 @@
 import client from './client';
 
-export const login = (email, password) =>
-  client.post('/auth/login', { email, password }).then((r) => r.data);
-
-export const logout = () => client.post('/auth/logout').then((r) => r.data);
-
+// Sign-up/sign-in/sign-out themselves go straight to Supabase (see hooks/useAuth.jsx) —
+// this file only covers the parts that live in our own API.
 export const me = () => client.get('/auth/me').then((r) => r.data);
+
+export const submitOnboarding = (name, requestedRole) =>
+  client.patch('/auth/onboarding', { name, requestedRole }).then((r) => r.data);

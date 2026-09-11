@@ -1,13 +1,13 @@
 const asyncHandler = require('../utils/asyncHandler');
 const service = require('../services/keywordDefinitions');
 
-// FR-GSM 14/15: goal keyword definitions with lock/unlock.
+// Goal keyword definitions with lock/unlock.
 const list = asyncHandler(async (req, res) => {
-  res.json(service.listDefinitions(req.params.projectId));
+  res.json(await service.listDefinitions(req.params.projectId));
 });
 
 const create = asyncHandler(async (req, res) => {
-  const def = service.createDefinition(req.params.projectId, {
+  const def = await service.createDefinition(req.params.projectId, {
     keyword: req.body.keyword,
     definition: req.body.definition,
     createdBy: req.user.id,
@@ -17,13 +17,13 @@ const create = asyncHandler(async (req, res) => {
 });
 
 const update = asyncHandler(async (req, res) => {
-  const def = service.updateDefinition(req.params.defId, { definition: req.body.definition }, req.user);
+  const def = await service.updateDefinition(req.params.defId, { definition: req.body.definition }, req.user);
   res.locals.audit({ action: 'update', objectType: 'keyword_definition', objectId: def.id });
   res.json(def);
 });
 
 const setLock = asyncHandler(async (req, res) => {
-  const def = service.setLock(req.params.defId, req.body.locked === true, req.user);
+  const def = await service.setLock(req.params.defId, req.body.locked === true, req.user);
   res.locals.audit({
     action: 'update',
     objectType: 'keyword_definition',
@@ -34,7 +34,7 @@ const setLock = asyncHandler(async (req, res) => {
 });
 
 const remove = asyncHandler(async (req, res) => {
-  service.deleteDefinition(req.params.defId, req.user);
+  await service.deleteDefinition(req.params.defId, req.user);
   res.locals.audit({
     action: 'delete',
     objectType: 'keyword_definition',

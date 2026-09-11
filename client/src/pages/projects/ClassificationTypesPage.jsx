@@ -68,7 +68,7 @@ export default function ClassificationTypesPage() {
       <PageHeader
         icon={SlidersHorizontal}
         title="Classification Dimensions"
-        description="Goal classification categories beyond the three built-in ones (FR-GSM 5/6)."
+        description="Goal classification categories beyond the three built-in ones."
       />
 
       <div className="card space-y-3">

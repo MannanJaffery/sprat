@@ -25,7 +25,33 @@ router.post(
   controller.create
 );
 
-router.get('/:projectId', param('projectId').isInt(), validate, requireProjectMember(), controller.getOne);
+// Any active user can view basic project info (name/description/member count) to
+// decide whether to request joining it — this does NOT require membership.
+// Every route below that touches real project data still requires it.
+router.get('/:projectId', param('projectId').isInt(), validate, controller.getOne);
+
+router.post(
+  '/:projectId/join-requests',
+  [param('projectId').isInt(), body('message').optional().isString()],
+  validate,
+  controller.createJoinRequest
+);
+
+router.get(
+  '/:projectId/join-requests',
+  requireProjectMember(),
+  authorize('admin', 'project_manager'),
+  controller.listJoinRequests
+);
+
+router.post(
+  '/:projectId/join-requests/:requestId/decide',
+  requireProjectMember(),
+  authorize('admin', 'project_manager'),
+  [param('requestId').isInt(), body('decision').isIn(['approved', 'rejected'])],
+  validate,
+  controller.decideJoinRequest
+);
 
 // FR-UA 2e/2f: project membership + guest restrictions.
 router.get('/:projectId/members', requireProjectMember(), controller.listMembers);
@@ -34,7 +60,7 @@ router.post(
   '/:projectId/members',
   requireProjectMember(),
   authorize('admin', 'project_manager'),
-  [body('userId').isInt()],
+  [body('userId').isUUID()],
   validate,
   controller.addMember
 );
@@ -43,7 +69,7 @@ router.patch(
   '/:projectId/members/:userId',
   requireProjectMember(),
   authorize('admin', 'project_manager'),
-  [param('userId').isInt()],
+  [param('userId').isUUID()],
   validate,
   controller.updateMemberRestrictions
 );

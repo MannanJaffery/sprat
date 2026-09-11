@@ -4,9 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
 import clsx from 'clsx';
 import {
-  FolderKanban, Users, ShieldCheck, ScrollText, LayoutDashboard,
+  FolderKanban, Users, ScrollText, LayoutDashboard, Home,
   Tags, FileText, Target, GitBranch, ArrowLeft, Search, SlidersHorizontal, BookMarked, X,
 } from 'lucide-react';
+import Logo from './Logo';
 import { useAuth } from '../hooks/useAuth';
 import * as projectsApi from '../api/projects';
 import Avatar from './Avatar';
@@ -116,9 +117,7 @@ export default function Sidebar({ open = false, onClose = () => {} }) {
       >
         <div className="flex items-center justify-between gap-2.5 border-b border-border px-5 py-5">
           <Link to="/projects" className="flex min-w-0 items-center gap-2.5">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-400 to-primary-700 shadow-glow">
-              <ShieldCheck size={18} className="text-white" />
-            </div>
+            <Logo size={36} className="shrink-0 drop-shadow-[0_4px_10px_rgba(154,119,32,0.35)]" />
             <div className="min-w-0">
               <p className="font-display text-lg font-semibold leading-tight text-text-primary">SPRAT</p>
               <p className="truncate text-[11px] leading-tight text-text-muted">
@@ -139,6 +138,7 @@ export default function Sidebar({ open = false, onClose = () => {} }) {
         <div className="flex-1 overflow-y-auto px-3 py-4">
           {projectId ? (
             <>
+              <NavItem to="/" icon={Home} label="Home" end onNavigate={onClose} />
               <NavItem to="/projects" icon={ArrowLeft} label="All projects" end onNavigate={onClose} />
 
               <div className="my-3 rounded-lg border border-border bg-surface-soft px-3 py-2.5">
@@ -172,15 +172,14 @@ export default function Sidebar({ open = false, onClose = () => {} }) {
           ) : (
             <>
               <NavSection>
+                <NavItem to="/" icon={Home} label="Home" end onNavigate={onClose} />
                 <NavItem to="/projects" icon={FolderKanban} label="Projects" end onNavigate={onClose} />
+                <NavItem to="/admin/user-groups" icon={FolderKanban} label="User Groups" onNavigate={onClose} />
               </NavSection>
               {(user?.role === 'admin' || user?.role === 'project_manager') && (
                 <NavSection label="Administration">
                   {user?.role === 'admin' && (
-                    <>
-                      <NavItem to="/admin/users" icon={Users} label="Users" onNavigate={onClose} />
-                      <NavItem to="/admin/user-groups" icon={FolderKanban} label="User Groups" onNavigate={onClose} />
-                    </>
+                    <NavItem to="/admin/users" icon={Users} label="Users" onNavigate={onClose} />
                   )}
                   <NavItem to="/admin/audit-log" icon={ScrollText} label="Audit Log" onNavigate={onClose} />
                 </NavSection>

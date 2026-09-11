@@ -2,8 +2,5 @@ node_modules/
 dist/
 build/
 .env
-server/db/*.sqlite3
-server/db/*.sqlite3-shm
-server/db/*.sqlite3-wal
 *.log
 .DS_Store

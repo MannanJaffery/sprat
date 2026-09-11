@@ -77,7 +77,7 @@ export default function KeywordDefinitionsPage() {
         icon={BookMarked}
         eyebrow={`${query.data?.length ?? '…'} definitions`}
         title="Keyword Definitions"
-        description="Shared definitions of goal keywords (FR-GSM 14). Lock a definition to protect it (FR-GSM 15)."
+        description="Shared definitions of goal keywords. Lock a definition to protect it from unwanted edits."
       />
 
       {canEdit && (

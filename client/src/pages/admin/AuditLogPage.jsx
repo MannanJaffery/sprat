@@ -39,7 +39,7 @@ export default function AuditLogPage() {
         icon={ScrollText}
         eyebrow={logsQuery.data ? `${logsQuery.data.total} entries` : undefined}
         title="Access Log"
-        description="Every create, update, and delete action in SPRAT. Append-only and tamper-evident (SR-1 / NFR4)."
+        description="Every create, update, and delete action in SPRAT. Append-only and tamper-evident."
       />
 
       <div className="card grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">

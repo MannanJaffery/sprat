@@ -1,54 +1,55 @@
 const db = require('../../db/connection');
 
-// SR-1 / NFR4: filtered, paginated view of the append-only access log for admins/PMs.
-function listAuditLogs({ page = 1, pageSize = 50, action, objectType, userId, from, to } = {}) {
+// Filtered, paginated view of the append-only access log for admins/PMs.
+async function listAuditLogs({ page = 1, pageSize = 50, action, objectType, userId, from, to } = {}) {
   const offset = (page - 1) * pageSize;
 
   const clauses = [];
   const params = [];
   if (action) {
-    clauses.push('a.action = ?');
     params.push(action);
+    clauses.push(`a.action = $${params.length}`);
   }
   if (objectType) {
-    clauses.push('a.object_type = ?');
     params.push(objectType);
+    clauses.push(`a.object_type = $${params.length}`);
   }
   if (userId) {
-    clauses.push('a.user_id = ?');
     params.push(userId);
+    clauses.push(`a.user_id = $${params.length}`);
   }
   if (from) {
-    clauses.push('a.occurred_at >= ?');
     params.push(from);
+    clauses.push(`a.occurred_at >= $${params.length}`);
   }
   if (to) {
-    clauses.push('a.occurred_at <= ?');
     params.push(to);
+    clauses.push(`a.occurred_at <= $${params.length}`);
   }
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
 
-  const rows = db
-    .prepare(
-      `SELECT a.id, a.action, a.object_type, a.object_id, a.occurred_at, a.ip_address, a.detail,
-              u.name AS user_name, u.email AS user_email
-       FROM access_logs a LEFT JOIN users u ON u.id = a.user_id
-       ${where}
-       ORDER BY a.occurred_at DESC, a.id DESC
-       LIMIT ? OFFSET ?`
-    )
-    .all(...params, pageSize, offset);
+  const listParams = [...params, pageSize, offset];
+  const rows = await db.query(
+    `SELECT a.id, a.action, a.object_type, a.object_id, a.occurred_at, a.ip_address, a.detail,
+            u.name AS user_name, u.email AS user_email
+     FROM access_logs a LEFT JOIN profiles u ON u.id = a.user_id
+     ${where}
+     ORDER BY a.occurred_at DESC, a.id DESC
+     LIMIT $${listParams.length - 1} OFFSET $${listParams.length}`,
+    listParams
+  );
 
-  const total = db
-    .prepare(`SELECT COUNT(*) AS count FROM access_logs a ${where}`)
-    .get(...params).count;
+  const totalRow = await db.queryOne(`SELECT COUNT(*) AS count FROM access_logs a ${where}`, params);
 
-  const objectTypes = db
-    .prepare('SELECT DISTINCT object_type FROM access_logs ORDER BY object_type')
-    .all()
-    .map((r) => r.object_type);
+  const objectTypeRows = await db.query('SELECT DISTINCT object_type FROM access_logs ORDER BY object_type');
 
-  return { rows, total, page, pageSize, objectTypes };
+  return {
+    rows,
+    total: Number(totalRow.count),
+    page,
+    pageSize,
+    objectTypes: objectTypeRows.map((r) => r.object_type),
+  };
 }
 
 module.exports = { listAuditLogs };

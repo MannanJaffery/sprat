@@ -2,8 +2,10 @@ const { Router } = require('express');
 const { body, param } = require('express-validator');
 const validate = require('../middleware/validate');
 const { authorize } = require('../middleware/auth');
+const { analysisLimiter } = require('../middleware/aiRateLimit');
 const controller = require('../controllers/goalsController');
 const classificationsController = require('../controllers/goalClassificationsController');
+const aiController = require('../controllers/aiController');
 
 const router = Router({ mergeParams: true });
 
@@ -52,6 +54,28 @@ router.post(
 
 // FR-GSM 10 / FR6
 router.get('/:goalId/traceability', param('goalId').isInt(), validate, controller.traceability);
+
+// Rule-based grammar/conformance check (no AI) and a read-only cross-reference
+// view — other goals related to this one by document, taxonomy, subject, or
+// legislation. Any project member (including guests, domain-filtered) can view.
+router.get('/:goalId/grammar-check', param('goalId').isInt(), validate, controller.grammarCheck);
+router.get('/:goalId/cross-references', param('goalId').isInt(), validate, controller.crossReferences);
+
+// AI-assisted analysis over every goal visible to the requester. Guests are
+// excluded — this surfaces judgment calls, not plain read access — and both
+// still respect guest domain filtering under the hood for non-guest reuse.
+router.post(
+  '/conflicts',
+  authorize('admin', 'project_manager', 'analyst'),
+  analysisLimiter,
+  aiController.detectConflicts
+);
+router.post(
+  '/summary',
+  authorize('admin', 'project_manager', 'analyst'),
+  analysisLimiter,
+  aiController.generateSummary
+);
 
 router.post(
   '/:goalId/document-links',

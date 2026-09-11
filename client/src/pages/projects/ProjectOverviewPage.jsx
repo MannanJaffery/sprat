@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { UserPlus, Users, Trash2, LayoutDashboard } from 'lucide-react';
+import { UserPlus, Users, Trash2, LayoutDashboard, Check, X, UserCheck } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import QueryState from '../../components/QueryState';
 import Modal from '../../components/Modal';
@@ -34,7 +34,7 @@ function AddMemberModal({ open, onClose, projectId, existingMemberIds }) {
   const mutation = useMutation({
     mutationFn: () =>
       projectsApi.addMember(projectId, {
-        userId: Number(userId),
+        userId,
         guestRestrictions: isGuest && !restrictToAll ? allowedDomainIds : null,
       }),
     onSuccess: () => {
@@ -61,7 +61,7 @@ function AddMemberModal({ open, onClose, projectId, existingMemberIds }) {
           <option value="">Select a user…</option>
           {availableUsers.map((u) => (
             <option key={u.id} value={u.id}>
-              {u.name} ({u.role.replace('_', ' ')})
+              {u.name} ({(u.role || 'no role').replace('_', ' ')})
             </option>
           ))}
         </SelectField>
@@ -108,6 +108,81 @@ function AddMemberModal({ open, onClose, projectId, existingMemberIds }) {
         </div>
       </form>
     </Modal>
+  );
+}
+
+// Any user can request to join this project; an admin or PM (who is already a
+// member) approves or rejects the request here.
+function JoinRequestsCard({ projectId }) {
+  const queryClient = useQueryClient();
+  const requestsQuery = useQuery({
+    queryKey: ['project-join-requests', projectId],
+    queryFn: () => projectsApi.listProjectJoinRequests(projectId),
+  });
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['project-join-requests', projectId] });
+    queryClient.invalidateQueries({ queryKey: ['members', projectId] });
+    queryClient.invalidateQueries({ queryKey: ['projects'] });
+  };
+
+  const decide = useMutation({
+    mutationFn: ({ requestId, decision }) =>
+      projectsApi.decideProjectJoinRequest(projectId, requestId, decision),
+    onSuccess: (_, vars) => {
+      toast.success(vars.decision === 'approved' ? 'Request approved — member added.' : 'Request rejected.');
+      invalidate();
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  });
+
+  return (
+    <div className="card space-y-4">
+      <h2 className="flex items-center gap-2 text-base font-semibold text-text-primary">
+        <UserCheck size={16} className="text-text-secondary" /> Pending join requests
+      </h2>
+      <QueryState query={requestsQuery}>
+        {(requests) =>
+          requests.length === 0 ? (
+            <p className="text-sm text-text-secondary">No one is waiting to join this project.</p>
+          ) : (
+            <div className="space-y-2.5">
+              {requests.map((r) => (
+                <div
+                  key={r.id}
+                  className="flex flex-col gap-3 rounded-lg border border-border bg-surface-soft p-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    <Avatar name={r.name || r.email} size="sm" />
+                    <div>
+                      <p className="text-sm font-medium text-text-primary">{r.name || 'Unnamed'}</p>
+                      <p className="text-xs text-text-secondary">{r.email}</p>
+                      {r.message && <p className="mt-1 text-xs italic text-text-secondary">“{r.message}”</p>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      className="btn-primary"
+                      disabled={decide.isPending}
+                      onClick={() => decide.mutate({ requestId: r.id, decision: 'approved' })}
+                    >
+                      <Check size={15} /> Approve
+                    </button>
+                    <button
+                      className="btn-secondary"
+                      disabled={decide.isPending}
+                      onClick={() => decide.mutate({ requestId: r.id, decision: 'rejected' })}
+                    >
+                      <X size={15} /> Reject
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        }
+      </QueryState>
+    </div>
   );
 }
 
@@ -339,7 +414,7 @@ export default function ProjectOverviewPage() {
                         </td>
                         <td className="py-2 text-text-secondary">{m.email}</td>
                         <td className="py-2">
-                          <Badge variant={roleVariant(m.role)}>{m.role.replace('_', ' ')}</Badge>
+                          <Badge variant={roleVariant(m.role)}>{(m.role || 'no role').replace('_', ' ')}</Badge>
                         </td>
                         <td className="py-2 text-text-secondary">
                           {m.role !== 'guest'
@@ -373,6 +448,8 @@ export default function ProjectOverviewPage() {
           )}
         </QueryState>
       </div>
+
+      {canManageMembers && <JoinRequestsCard projectId={projectId} />}
 
       <UserGroupsCard projectId={projectId} canManage={canManageMembers} />
 

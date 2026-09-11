@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { Disclosure, Transition } from '@headlessui/react';
+import { Navigate, useLocation, useNavigate, Link } from 'react-router-dom';
+import { Menu, Transition } from '@headlessui/react';
+import { Fragment } from 'react';
 import { motion } from 'framer-motion';
 import {
-  ShieldCheck, Mail, Lock, Eye, EyeOff, Loader2, ChevronDown,
-  Target, GitBranch, Users2, Sparkles,
+  Mail, Lock, Eye, EyeOff, Loader2,
+  Target, GitBranch, Users2, Sparkles, ChevronDown, Wand2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import Logo from '../components/Logo';
 import { useAuth } from '../hooks/useAuth';
 import { getErrorMessage } from '../api/client';
 import { fadeInUp } from '../lib/motion';
@@ -29,25 +31,27 @@ const FEATURES = [
   },
 ];
 
+// Seeded via server/db/seedDemoUsers.js — one pre-approved account per role, so
+// the app can be tried immediately without going through sign-up/approval.
 const DEMO_ACCOUNTS = [
-  { role: 'Administrator', email: 'admin@sprat.local', password: 'ChangeMe123!' },
-  { role: 'Project Manager', email: 'pm@sprat.local', password: 'Password123!' },
-  { role: 'Analyst', email: 'analyst1@sprat.local', password: 'Password123!' },
-  { role: 'Analyst', email: 'analyst2@sprat.local', password: 'Password123!' },
-  { role: 'Guest', email: 'guest@sprat.local', password: 'Password123!' },
+  { role: 'Admin', email: 'admin@sprat.dev', password: 'Demo@1234' },
+  { role: 'Project Manager', email: 'manager@sprat.dev', password: 'Demo@1234' },
+  { role: 'Analyst', email: 'analyst@sprat.dev', password: 'Demo@1234' },
+  { role: 'Guest', email: 'guest@sprat.dev', password: 'Demo@1234' },
 ];
 
 export default function LoginPage() {
-  const { user, login, loading } = useAuth();
+  const { user, login, loading, resetPasswordForEmail } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   if (!loading && user) {
-    const from = location.state?.from?.pathname || '/';
+    const from = location.state?.from?.pathname || '/projects';
     return <Navigate to={from} replace />;
   }
 
@@ -57,11 +61,27 @@ export default function LoginPage() {
     try {
       await login(email, password);
       toast.success('Welcome back.');
-      navigate('/');
+      navigate('/projects');
     } catch (err) {
       toast.error(getErrorMessage(err));
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast.error('Enter your email above first, then click "Forgot password?".');
+      return;
+    }
+    setResetting(true);
+    try {
+      await resetPasswordForEmail(email);
+      toast.success('Check your email for a password reset link.');
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -83,9 +103,7 @@ export default function LoginPage() {
         </div>
 
         <motion.div initial="hidden" animate="show" variants={fadeInUp} className="relative z-10 flex items-center gap-2.5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary-300 to-primary-500 shadow-glow">
-            <ShieldCheck size={20} className="text-white" />
-          </div>
+          <Logo size={40} className="drop-shadow-[0_4px_12px_rgba(154,119,32,0.4)]" />
           <span className="font-display text-xl font-semibold text-background">SPRAT</span>
         </motion.div>
 
@@ -124,7 +142,7 @@ export default function LoginPage() {
         </motion.div>
 
         <motion.p initial="hidden" animate="show" variants={fadeInUp} className="relative z-10 text-xs text-background/40">
-          © {new Date().getFullYear()} SPRAT — built for scoped, evidence-based quality evaluation.
+          © {new Date().getFullYear()} SPRAT.
         </motion.p>
       </div>
 
@@ -133,16 +151,56 @@ export default function LoginPage() {
         <motion.div initial="hidden" animate="show" variants={fadeInUp} className="w-full max-w-sm space-y-8">
           <div className="space-y-1 lg:hidden">
             <div className="mb-4 flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary-400 to-primary-700 shadow-glow">
-                <ShieldCheck size={18} className="text-white" />
-              </div>
+              <Logo size={36} />
               <span className="font-display text-lg font-semibold text-text-primary">SPRAT</span>
             </div>
           </div>
 
-          <div>
-            <h2 className="font-display text-2xl font-medium text-text-primary">Welcome back</h2>
-            <p className="mt-1 text-sm text-text-secondary">Sign in to continue to your workspace.</p>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="font-display text-2xl font-medium text-text-primary">Welcome back</h2>
+              <p className="mt-1 text-sm text-text-secondary">Sign in to continue to your workspace.</p>
+            </div>
+
+            <Menu as="div" className="relative shrink-0">
+              <Menu.Button className="btn-secondary !py-1.5 text-xs">
+                <Wand2 size={13} /> Quick login <ChevronDown size={13} />
+              </Menu.Button>
+              <Transition
+                as={Fragment}
+                enter="transition ease-out duration-150"
+                enterFrom="opacity-0 scale-95 -translate-y-1"
+                enterTo="opacity-100 scale-100 translate-y-0"
+                leave="transition ease-in duration-100"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <Menu.Items className="absolute right-0 z-20 mt-2 w-60 origin-top-right rounded-xl border border-border bg-surface p-1.5 shadow-soft focus:outline-none">
+                  <p className="px-3 pb-1.5 pt-1 text-[11px] font-semibold uppercase tracking-wide text-text-muted">
+                    Demo accounts
+                  </p>
+                  {DEMO_ACCOUNTS.map((acc) => (
+                    <Menu.Item key={acc.email}>
+                      {({ active }) => (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEmail(acc.email);
+                            setPassword(acc.password);
+                          }}
+                          className={`flex w-full flex-col rounded-lg px-3 py-2 text-left text-sm ${
+                            active ? 'bg-primary-50' : ''
+                          }`}
+                        >
+                          <span className="font-medium text-text-primary">{acc.role}</span>
+                          <span className="text-xs text-text-secondary">{acc.email}</span>
+                        </button>
+                      )}
+                    </Menu.Item>
+                  ))}
+                </Menu.Items>
+              </Transition>
+            </Menu>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -157,13 +215,23 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="input pl-9"
-                  placeholder="you@sprat.local"
+                  placeholder="you@example.com"
                 />
               </div>
             </div>
 
             <div>
-              <label className="label">Password</label>
+              <div className="flex items-center justify-between">
+                <label className="label">Password</label>
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={resetting}
+                  className="mb-1.5 text-xs font-medium text-primary-600 hover:text-primary-700"
+                >
+                  Forgot password?
+                </button>
+              </div>
               <div className="relative">
                 <Lock size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
                 <input
@@ -192,41 +260,12 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <Disclosure>
-            {({ open }) => (
-              <div className="rounded-lg border border-border bg-surface-soft">
-                <Disclosure.Button className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-text-primary">
-                  Demo accounts for grading/testing
-                  <ChevronDown size={16} className={`text-text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
-                </Disclosure.Button>
-                <Transition
-                  enter="transition ease-out duration-150"
-                  enterFrom="opacity-0 -translate-y-1"
-                  enterTo="opacity-100 translate-y-0"
-                >
-                  <Disclosure.Panel className="space-y-1.5 px-4 pb-4">
-                    {DEMO_ACCOUNTS.map((acc) => (
-                      <button
-                        key={acc.email}
-                        type="button"
-                        onClick={() => {
-                          setEmail(acc.email);
-                          setPassword(acc.password);
-                        }}
-                        className="flex w-full items-center justify-between rounded-md border border-border bg-surface px-3 py-2 text-left text-xs transition-colors hover:border-primary-300"
-                      >
-                        <span>
-                          <span className="font-medium text-text-primary">{acc.role}</span>
-                          <span className="ml-2 text-text-secondary">{acc.email}</span>
-                        </span>
-                        <span className="text-primary-600">Use</span>
-                      </button>
-                    ))}
-                  </Disclosure.Panel>
-                </Transition>
-              </div>
-            )}
-          </Disclosure>
+          <p className="text-center text-sm text-text-secondary">
+            New here?{' '}
+            <Link to="/signup" className="font-medium text-primary-600 hover:text-primary-700">
+              Create an account
+            </Link>
+          </p>
         </motion.div>
       </div>
     </div>

@@ -9,55 +9,46 @@ const router = Router();
 router.use(authenticate);
 
 // Read access is shared with Project Managers, who need the directory to assign
-// analysts/guests to their projects (FR-UA 2e). All mutations remain admin-only (FR-UA 1).
+// analysts/guests to their projects. All mutations remain admin-only, and admin
+// accounts are never created or disabled through this API at all.
 router.get('/', authorize('admin', 'project_manager'), usersController.list);
+router.get('/pending', authorize('admin'), usersController.listPending);
 router.get(
   '/:id',
   authorize('admin', 'project_manager'),
-  param('id').isInt(),
+  param('id').isUUID(),
   validate,
   usersController.getOne
 );
 
 router.post(
-  '/',
+  '/:id/approve',
   authorize('admin'),
-  [
-    body('name').trim().notEmpty().withMessage('Name is required.'),
-    body('email').isEmail().withMessage('A valid email is required.'),
-    body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters.'),
-    body('role').isIn(['admin', 'project_manager', 'analyst', 'guest']).withMessage('Invalid role.'),
-  ],
+  [param('id').isUUID(), body('role').isIn(['project_manager', 'analyst', 'guest']).withMessage('Invalid role.')],
   validate,
-  usersController.create
+  usersController.approve
 );
+
+router.post('/:id/reject', authorize('admin'), param('id').isUUID(), validate, usersController.reject);
 
 router.patch(
   '/:id',
   authorize('admin'),
-  [param('id').isInt(), body('name').optional().trim().notEmpty()],
+  [param('id').isUUID(), body('name').optional().trim().notEmpty()],
   validate,
   usersController.update
 );
 
-router.patch('/:id/disable', authorize('admin'), param('id').isInt(), validate, usersController.disable);
-router.patch('/:id/enable', authorize('admin'), param('id').isInt(), validate, usersController.enable);
+router.patch('/:id/disable', authorize('admin'), param('id').isUUID(), validate, usersController.disable);
+router.patch('/:id/enable', authorize('admin'), param('id').isUUID(), validate, usersController.enable);
 
-// FR-UA 2d: project managers assign analysts/guests to administrator-created user groups.
+// Project managers assign analysts/guests to administrator-created user groups.
 router.patch(
   '/:id/group',
   authorize('admin', 'project_manager'),
-  [param('id').isInt(), body('userGroupId').optional({ nullable: true }).isInt()],
+  [param('id').isUUID(), body('userGroupId').optional({ nullable: true }).isInt()],
   validate,
   usersController.setGroup
-);
-
-router.post(
-  '/:id/reset-password',
-  authorize('admin'),
-  [param('id').isInt(), body('password').isLength({ min: 8 })],
-  validate,
-  usersController.resetPassword
 );
 
 module.exports = router;

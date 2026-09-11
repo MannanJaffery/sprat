@@ -50,7 +50,7 @@ export default function SearchPage() {
       <PageHeader
         icon={SearchIcon}
         title="Search"
-        description="Find goals and scenarios by any combination of attributes (FR-GSM 16/17, FR-SSM 7)."
+        description="Find goals and scenarios by any combination of attributes."
       />
 
       <form

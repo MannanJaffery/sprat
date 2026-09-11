@@ -1,14 +1,14 @@
 const asyncHandler = require('../utils/asyncHandler');
 const service = require('../services/classificationTypes');
 
-// FR-GSM 5: list project-defined goal classification dimensions.
+// List project-defined goal classification dimensions.
 const listTypes = asyncHandler(async (req, res) => {
-  res.json(service.listTypes(req.params.projectId));
+  res.json(await service.listTypes(req.params.projectId));
 });
 
-// FR-GSM 5: PM adds a new classification dimension directly.
+// PM adds a new classification dimension directly.
 const createType = asyncHandler(async (req, res) => {
-  const type = service.createType(req.params.projectId, {
+  const type = await service.createType(req.params.projectId, {
     label: req.body.label,
     options: req.body.options,
     createdBy: req.user.id,
@@ -17,13 +17,13 @@ const createType = asyncHandler(async (req, res) => {
   res.status(201).json(type);
 });
 
-// FR-GSM 6: an analyst requests a new dimension; a PM approves or rejects it.
+// An analyst requests a new dimension; a PM approves or rejects it.
 const listRequests = asyncHandler(async (req, res) => {
-  res.json(service.listRequests(req.params.projectId));
+  res.json(await service.listRequests(req.params.projectId));
 });
 
 const createRequest = asyncHandler(async (req, res) => {
-  const request = service.createRequest(req.params.projectId, {
+  const request = await service.createRequest(req.params.projectId, {
     requestedBy: req.user.id,
     label: req.body.label,
     options: req.body.options,
@@ -38,7 +38,7 @@ const createRequest = asyncHandler(async (req, res) => {
 });
 
 const decideRequest = asyncHandler(async (req, res) => {
-  const result = service.decideRequest(req.params.requestId, {
+  const result = await service.decideRequest(req.params.requestId, {
     decidedBy: req.user.id,
     decision: req.body.decision,
   });
