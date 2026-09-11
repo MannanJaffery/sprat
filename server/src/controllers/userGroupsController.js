@@ -6,7 +6,11 @@ const list = asyncHandler(async (req, res) => {
 });
 
 const create = asyncHandler(async (req, res) => {
-  const group = await userGroupsService.createUserGroup({ name: req.body.name, createdBy: req.user.id });
+  const group = await userGroupsService.createUserGroup({
+    name: req.body.name,
+    createdBy: req.user.id,
+    creatorRole: req.user.role,
+  });
   res.locals.audit({ action: 'create', objectType: 'user_group', objectId: group.id });
   res.status(201).json(group);
 });

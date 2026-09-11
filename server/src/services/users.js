@@ -95,12 +95,12 @@ async function setUserStatus(id, status) {
   );
 }
 
-// A project manager assigns an analyst (or guest) to a user group created by
-// the administrator. Pass null to clear the assignment.
+// An admin or project manager assigns an analyst, guest, or fellow project
+// manager to a user group. Pass null to clear the assignment.
 async function setUserGroup(id, userGroupId) {
   const user = await getUserById(id);
-  if (!['analyst', 'guest'].includes(user.role)) {
-    throw new ConflictError('Only analysts and guests can be assigned to a user group.');
+  if (!['analyst', 'guest', 'project_manager'].includes(user.role)) {
+    throw new ConflictError('Only analysts, guests, and project managers can be assigned to a user group.');
   }
   if (userGroupId != null) {
     const group = await db.queryOne('SELECT id FROM user_groups WHERE id = $1', [userGroupId]);

@@ -42,7 +42,7 @@ router.patch(
 router.patch('/:id/disable', authorize('admin'), param('id').isUUID(), validate, usersController.disable);
 router.patch('/:id/enable', authorize('admin'), param('id').isUUID(), validate, usersController.enable);
 
-// Project managers assign analysts/guests to administrator-created user groups.
+// Admins/PMs assign analysts, guests, or fellow PMs to a user group.
 router.patch(
   '/:id/group',
   authorize('admin', 'project_manager'),

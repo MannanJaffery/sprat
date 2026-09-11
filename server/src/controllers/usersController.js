@@ -46,7 +46,7 @@ const enable = asyncHandler(async (req, res) => {
   res.json(user);
 });
 
-// A project manager (or admin) assigns an analyst/guest to a user group.
+// An admin or project manager assigns an analyst, guest, or fellow PM to a user group.
 const setGroup = asyncHandler(async (req, res) => {
   const groupId = req.body.userGroupId === null ? null : Number(req.body.userGroupId);
   const user = await usersService.setUserGroup(req.params.id, groupId);

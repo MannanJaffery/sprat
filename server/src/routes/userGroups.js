@@ -11,13 +11,13 @@ router.use(authenticate);
 router.get('/', controller.list);
 router.post(
   '/',
-  authorize('admin'),
+  authorize('admin', 'project_manager'),
   [body('name').trim().notEmpty().withMessage('Group name is required.')],
   validate,
   controller.create
 );
 
-// Any analyst/guest can request to join a group; an admin or PM decides.
+// Any analyst/guest/PM can request to join a group; an admin or PM decides.
 router.get('/join-requests', authorize('admin', 'project_manager'), controller.listJoinRequests);
 
 router.post(

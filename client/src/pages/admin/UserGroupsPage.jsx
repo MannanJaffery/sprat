@@ -24,44 +24,56 @@ function GroupCard({ group, canJoin }) {
     onError: (err) => toast.error(getErrorMessage(err)),
   });
 
+  const creatorLabel = group.created_by_name || group.created_by_email || 'Unknown';
+
   return (
-    <motion.div variants={staggerItem} className="card card-hover flex items-center justify-between gap-3">
-      <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600">
-          <FolderKanban size={16} />
+    <motion.div variants={staggerItem} className="card card-hover flex flex-col gap-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600">
+            <FolderKanban size={18} />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-text-primary">{group.name}</p>
+            <p className="text-xs text-text-secondary">
+              {group.member_count} member{Number(group.member_count) === 1 ? '' : 's'}
+            </p>
+          </div>
         </div>
-        <div>
-          <p className="text-sm font-medium text-text-primary">{group.name}</p>
-          <p className="text-xs text-text-secondary">
-            {group.member_count} member{Number(group.member_count) === 1 ? '' : 's'}
-          </p>
-        </div>
+
+        {group.is_member ? (
+          <span className="badge bg-success/10 text-success shrink-0">Member</span>
+        ) : group.join_request_status === 'pending' ? (
+          <span className="badge bg-warning/10 text-warning shrink-0">
+            <Clock size={11} className="mr-1" /> Pending
+          </span>
+        ) : (
+          canJoin && (
+            <button
+              type="button"
+              className="btn-secondary !py-1 !px-2.5 text-xs shrink-0"
+              disabled={requestJoin.isPending}
+              onClick={() => requestJoin.mutate()}
+            >
+              {group.join_request_status === 'rejected' ? (
+                <>
+                  <RotateCcw size={12} /> Request again
+                </>
+              ) : (
+                'Request to join'
+              )}
+            </button>
+          )
+        )}
       </div>
 
-      {group.is_member ? (
-        <span className="badge bg-success/10 text-success">Member</span>
-      ) : group.join_request_status === 'pending' ? (
-        <span className="badge bg-warning/10 text-warning">
-          <Clock size={11} className="mr-1" /> Pending
-        </span>
-      ) : (
-        canJoin && (
-          <button
-            type="button"
-            className="btn-secondary !py-1 !px-2.5 text-xs"
-            disabled={requestJoin.isPending}
-            onClick={() => requestJoin.mutate()}
-          >
-            {group.join_request_status === 'rejected' ? (
-              <>
-                <RotateCcw size={12} /> Request again
-              </>
-            ) : (
-              'Request to join'
-            )}
-          </button>
-        )
-      )}
+      <div className="flex items-center gap-2.5 border-t border-border pt-3">
+        <Avatar name={creatorLabel} size="sm" />
+        <div className="min-w-0">
+          <p className="truncate text-xs font-medium text-text-primary">{creatorLabel}</p>
+          <p className="text-[11px] uppercase tracking-wide text-text-secondary">Group creator</p>
+        </div>
+      </div>
     </motion.div>
   );
 }
@@ -118,9 +130,9 @@ export default function UserGroupsPage() {
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
 
-  const canCreate = user?.role === 'admin';
+  const canCreate = user?.role === 'admin' || user?.role === 'project_manager';
   const canDecide = user?.role === 'admin' || user?.role === 'project_manager';
-  const canJoin = ['analyst', 'guest'].includes(user?.role);
+  const canJoin = ['analyst', 'guest', 'project_manager'].includes(user?.role);
 
   const groupsQuery = useQuery({ queryKey: ['user-groups'], queryFn: usersApi.listUserGroups });
   const requestsQuery = useQuery({
@@ -145,7 +157,7 @@ export default function UserGroupsPage() {
         icon={FolderKanban}
         eyebrow={`${groupsQuery.data?.length ?? '…'} groups`}
         title="User Groups"
-        description="Organizations analysts and guests belong to. Assigning a group to a project bulk-adds its members."
+        description="Organizations analysts, guests, and project managers belong to. Assigning a group to a project bulk-adds its members."
       />
 
       {canCreate && (
