@@ -11,23 +11,24 @@ Each requirement is classified as one of:
   requirements — those are operations within a requirement, not requirements
   in their own right.
 - **Non-CRUD** — a capability whose value is *not* routine data management:
-  search, computed analysis, reconciliation, traceability, or an AI-assisted
-  action. These are read-heavy or computed outputs, not create/update/delete
-  workflows on a resource.
+  search, computed analysis, reconciliation, traceability, an approval-style
+  workflow, or an AI-assisted action. These are read-heavy, state-driven, or
+  computed outputs, not create/update/delete management of a resource's own
+  fields.
 
-14 requirements are listed below: 7 CRUD, 7 Non-CRUD.
+14 requirements are listed below: 6 CRUD, 8 Non-CRUD.
 
 ## Summary
 
 | ID | Requirement | Category | Primary roles |
 |----|---|---|---|
-| FR-1 | User Authentication & Onboarding | Non CRUD | All |
-| FR-2 | Project Management | CRUD | Admin, Project Manager |
-| FR-3 | User Group Management | CRUD | Admin, Project Manager |
-| FR-4 | Domain & Document Management | CRUD | Admin, Project Manager |
-| FR-5 | Goal Management | CRUD | Admin, Project Manager, Analyst |
-| FR-6 | Scenario Management | CRUD | Admin, Project Manager, Analyst |
-| FR-7 | Classification Dimension & Keyword Definitions | CRUD | Admin, Project Manager |
+| FR-1 | Project Management | CRUD | Admin, Project Manager |
+| FR-2 | User Group Management | CRUD | Admin, Project Manager |
+| FR-3 | Domain & Document Management | CRUD | Admin, Project Manager |
+| FR-4 | Goal Management | CRUD | Admin, Project Manager, Analyst |
+| FR-5 | Scenario Management | CRUD | Admin, Project Manager, Analyst |
+| FR-6 | Classification Dimension & Keyword Definitions | CRUD | Admin, Project Manager |
+| FR-7 | User Authentication & Onboarding | Non-CRUD | All |
 | FR-8 | Multi-Analyst Classification & Reconciliation | Non-CRUD | Analyst, Admin, Project Manager |
 | FR-9 | Goal Traceability & Cross-Reference View | Non-CRUD | All (scoped) |
 | FR-10 | Full-Text Search | Non-CRUD | All (scoped) |
@@ -40,21 +41,7 @@ Each requirement is classified as one of:
 
 ## CRUD requirements
 
-### FR-1 — User Authentication & Onboarding
-
-Account creation, credential management, and the approval gate that stands
-between a new sign-up and real access.
-
-- Sign up and sign in via Supabase-managed authentication (email + password,
-  password reset).
-- A new account starts in a `pending` state with no role; the user submits a
-  name and a requested role (Project Manager, Analyst, or Guest — never Admin).
-- An Admin reviews pending sign-ups and approves (assigning the final role) or
-  rejects them.
-- An Admin can disable or re-enable any non-admin account; admin accounts can
-  never be disabled or created through the application itself.
-
-### FR-2 — Project Management
+### FR-1 — Project Management
 
 The top-level container for a body of work: its documents, domains, goals,
 scenarios, and team.
@@ -67,7 +54,7 @@ scenarios, and team.
 - Request to join a project; an Admin or Project Manager approves or rejects
   the request.
 
-### FR-3 — User Group Management
+### FR-2 — User Group Management
 
 A reusable pool of analysts/guests that can be assigned to a project as a unit.
 
@@ -76,7 +63,7 @@ A reusable pool of analysts/guests that can be assigned to a project as a unit.
 - An Admin or Project Manager approves or rejects join requests, which adds the
   requester to the group.
 
-### FR-4 — Domain & Document Management
+### FR-3 — Domain & Document Management
 
 The subject-matter categories a project organizes its source material under,
 and the policy documents themselves.
@@ -86,7 +73,7 @@ and the policy documents themselves.
 - Add, edit, and delete policy documents, each assigned to a domain and holding
   the source text goals are mined from.
 
-### FR-5 — Goal Management
+### FR-4 — Goal Management
 
 The core unit of analysis: a security or privacy obligation extracted from a
 policy document.
@@ -98,7 +85,7 @@ policy document.
   scenario associations rather than leaving them dangling.
 - Link an existing goal to additional source documents it also occurs in.
 
-### FR-6 — Scenario Management
+### FR-5 — Scenario Management
 
 A concrete situation that exercises one or more goals.
 
@@ -107,7 +94,7 @@ A concrete situation that exercises one or more goals.
   requirements text.
 - Link and unlink goals to a scenario.
 
-### FR-7 — Classification Dimension & Keyword Definitions
+### FR-6 — Classification Dimension & Keyword Definitions
 
 The taxonomy a project classifies its goals against, and the vocabulary that
 supports it.
@@ -121,6 +108,21 @@ supports it.
 ---
 
 ## Non-CRUD requirements
+
+### FR-7 — User Authentication & Onboarding
+
+Account creation and the approval workflow that stands between a new sign-up
+and real access — a gated state machine (`pending` → `active`/`disabled`)
+rather than free-form editing of a resource's fields.
+
+- Sign up and sign in via Supabase-managed authentication (email + password,
+  password reset).
+- A new account starts in a `pending` state with no role; the user submits a
+  name and a requested role (Project Manager, Analyst, or Guest — never Admin).
+- An Admin reviews pending sign-ups and approves (assigning the final role) or
+  rejects them.
+- An Admin can disable or re-enable any non-admin account; admin accounts can
+  never be disabled or created through the application itself.
 
 ### FR-8 — Multi-Analyst Classification & Reconciliation
 
