@@ -83,26 +83,44 @@ async function createJoinRequest(groupId, requestedBy, requesterRole, message) {
   );
 }
 
-// One flat list across all groups (groups aren't project-scoped, so unlike
-// project join requests there's no natural per-group "owner" to filter by).
-async function listJoinRequests() {
+// Admins see every pending request; a project manager only sees requests for
+// groups they themselves created — a PM was never meant to decide requests on
+// a group they don't own, even though `authorize()` alone can't express that.
+async function listJoinRequests(requestingUser) {
+  const isAdmin = requestingUser.role === 'admin';
   return db.query(
     `SELECT r.id, r.status, r.message, r.created_at, r.user_group_id,
-            g.name AS group_name,
+            g.name AS group_name, g.created_by AS group_created_by,
             u.id AS user_id, u.name, u.email, u.role
      FROM user_group_join_requests r
      JOIN user_groups g ON g.id = r.user_group_id
      JOIN profiles u ON u.id = r.requested_by
-     WHERE r.status = 'pending'
-     ORDER BY r.created_at ASC`
+     WHERE r.status = 'pending' ${isAdmin ? '' : 'AND g.created_by = $1'}
+     ORDER BY r.created_at ASC`,
+    isAdmin ? [] : [requestingUser.id]
   );
 }
 
-async function decideJoinRequest(requestId, { decidedBy, decision }) {
+async function decideJoinRequest(requestId, { decidedBy, decidedByRole, decision }) {
   return db.withTransaction(async (tx) => {
-    const request = await tx.queryOne('SELECT * FROM user_group_join_requests WHERE id = $1', [requestId]);
+    const request = await tx.queryOne(
+      `SELECT r.*, g.created_by AS group_created_by
+       FROM user_group_join_requests r
+       JOIN user_groups g ON g.id = r.user_group_id
+       WHERE r.id = $1`,
+      [requestId]
+    );
     if (!request) throw new NotFoundError('Join request not found');
     if (request.status !== 'pending') throw new ConflictError('This request has already been decided.');
+
+    // Nobody decides their own request — including an admin — and a PM may
+    // only decide requests for a group they created themselves, not any group.
+    if (request.requested_by === decidedBy) {
+      throw new ForbiddenError('You cannot approve or reject your own join request.');
+    }
+    if (decidedByRole !== 'admin' && request.group_created_by !== decidedBy) {
+      throw new ForbiddenError("Only this group's creator or an admin can decide its join requests.");
+    }
 
     if (decision === 'approved') {
       const profile = await tx.queryOne('SELECT role FROM profiles WHERE id = $1', [request.requested_by]);

@@ -27,12 +27,13 @@ const createJoinRequest = asyncHandler(async (req, res) => {
 });
 
 const listJoinRequests = asyncHandler(async (req, res) => {
-  res.json(await userGroupsService.listJoinRequests());
+  res.json(await userGroupsService.listJoinRequests(req.user));
 });
 
 const decideJoinRequest = asyncHandler(async (req, res) => {
   const result = await userGroupsService.decideJoinRequest(req.params.requestId, {
     decidedBy: req.user.id,
+    decidedByRole: req.user.role,
     decision: req.body.decision,
   });
   res.locals.audit({

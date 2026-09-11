@@ -78,7 +78,7 @@ function GroupCard({ group, canJoin }) {
   );
 }
 
-function JoinRequestRow({ request }) {
+function JoinRequestRow({ request, currentUserId }) {
   const queryClient = useQueryClient();
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['user-groups', 'join-requests'] });
@@ -101,6 +101,7 @@ function JoinRequestRow({ request }) {
     onError: (err) => toast.error(getErrorMessage(err)),
   });
   const busy = approve.isPending || reject.isPending;
+  const isOwnRequest = request.user_id === currentUserId;
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-border bg-surface-soft p-3 sm:flex-row sm:items-center sm:justify-between">
@@ -113,14 +114,18 @@ function JoinRequestRow({ request }) {
           <p className="text-xs text-text-secondary">{request.email}</p>
         </div>
       </div>
-      <div className="flex items-center gap-2">
-        <button className="btn-primary" disabled={busy} onClick={() => approve.mutate()}>
-          <Check size={15} /> Approve
-        </button>
-        <button className="btn-secondary" disabled={busy} onClick={() => reject.mutate()}>
-          <X size={15} /> Reject
-        </button>
-      </div>
+      {isOwnRequest ? (
+        <p className="text-xs italic text-text-muted">You can't decide your own request.</p>
+      ) : (
+        <div className="flex items-center gap-2">
+          <button className="btn-primary" disabled={busy} onClick={() => approve.mutate()}>
+            <Check size={15} /> Approve
+          </button>
+          <button className="btn-secondary" disabled={busy} onClick={() => reject.mutate()}>
+            <X size={15} /> Reject
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -189,7 +194,7 @@ export default function UserGroupsPage() {
               ) : (
                 <div className="space-y-2.5">
                   {requests.map((r) => (
-                    <JoinRequestRow key={r.id} request={r} />
+                    <JoinRequestRow key={r.id} request={r} currentUserId={user?.id} />
                   ))}
                 </div>
               )

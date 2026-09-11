@@ -294,7 +294,7 @@ function UserGroupsCard({ projectId, canManage }) {
   );
 }
 
-// FR-UA 2d: PM assigns an individual analyst/guest to a user group.
+// Admin/PM assigns an individual analyst, guest, or fellow PM to a user group.
 function MemberGroupSelect({ member, groups }) {
   const queryClient = useQueryClient();
   const mutation = useMutation({
@@ -403,7 +403,7 @@ export default function ProjectOverviewPage() {
                   {members.map((m) => {
                     const directoryUser = usersById[m.user_id];
                     const canAssignGroup =
-                      canManageMembers && ['analyst', 'guest'].includes(m.role);
+                      canManageMembers && ['analyst', 'guest', 'project_manager'].includes(m.role);
                     return (
                       <tr key={m.id} className="border-b border-border last:border-0">
                         <td className="py-2">
